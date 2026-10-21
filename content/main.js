@@ -1,49 +1,57 @@
 'use strict';
-// Task 4 版本：截取结果直接自动下载（验证拼接正确性），Task 5 换成预览浮层。
+// 协调状态机：idle → selecting → capturing → preview →（重选回 selecting / 关闭回 idle）
 (function () {
   if (window.__fpsMainLoaded) return;
   window.__fpsMainLoaded = true;
 
-  let capturing = false;
+  let phase = 'idle'; // idle | selecting | capturing | preview
+  let ui = null;      // 当前浮层的 {close()}
 
   function twoFrames() {
     return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   }
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && capturing) window.FpsCapture.cancel();
+    if (e.key === 'Escape' && phase === 'capturing') window.FpsCapture.cancel();
   }, true);
 
   function start() {
-    if (capturing) return;
-    window.FpsSelect.start({ onConfirm, onCancel: () => {} });
+    if (phase !== 'idle') return; // 已有流程在进行，忽略重复点击
+    beginSelect();
+  }
+
+  function beginSelect() {
+    phase = 'selecting';
+    ui = window.FpsSelect.start({
+      onConfirm,
+      onCancel: () => { phase = 'idle'; ui = null; },
+    });
   }
 
   async function onConfirm(sel) {
-    capturing = true;
-    await twoFrames(); // 等选区遮罩真正离开合成帧，避免出现在首帧里
+    ui = null; // 选区浮层已自行移除
+    phase = 'capturing';
+    await twoFrames(); // 等遮罩真正离开合成帧，避免出现在首帧里
     try {
       const result = await window.FpsCapture.capture(sel, (i, n) => {
         chrome.runtime.sendMessage({ type: 'fps:progress', text: `${i}/${n}` });
       });
-      result.parts.forEach((p, i) => {
-        setTimeout(() => {
-          p.canvas.toBlob((blob) => {
-            if (!blob) return;
-            const a = document.createElement('a');
-            a.download = `fps-debug-part${i + 1}.png`;
-            a.href = URL.createObjectURL(blob);
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-          }, 'image/png');
-        }, i * 400);
+      phase = 'preview';
+      ui = window.FpsPreview.show({
+        ...result,
+        onRetry: () => { beginSelect(); },
+        onClose: () => { phase = 'idle'; ui = null; },
       });
     } catch (e) {
-      if (e && e.message !== 'aborted') {
-        alert('截取失败：' + (e && e.message ? e.message : e));
+      if (e && e.message === 'aborted') {
+        phase = 'idle'; // 用户 Esc 取消：静默回到 idle
+        return;
       }
-    } finally {
-      capturing = false;
+      phase = 'preview';
+      ui = window.FpsPreview.showError(
+        '截取失败：' + (e && e.message ? e.message : e),
+        () => { phase = 'idle'; ui = null; },
+      );
     }
   }
 
