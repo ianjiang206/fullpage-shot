@@ -29,18 +29,18 @@ window.FpsSelect = (() => {
     const toolbar = document.createElement('div');
     toolbar.className = 'fps-toolbar';
     const hint = document.createElement('span');
-    hint.textContent = '拖拽框选要截取的区域 · Enter 确认 · Esc 取消';
-    const fullBtn = mkBtn('截取整页', 'fps-btn');
-    const cancelBtn = mkBtn('取消', 'fps-btn');
-    toolbar.append(hint, fullBtn, cancelBtn);
+    hint.textContent = '拖拽框选要截取的区域';
+    const actionBtn = mkBtn('', 'fps-btn fps-primary');
+    const cancelBtn = mkBtn('', 'fps-btn');
+    cancelBtn.innerHTML = '取消 <kbd>Esc</kbd>';
+    toolbar.append(hint, actionBtn, cancelBtn);
 
     const rectEl = document.createElement('div');
     rectEl.className = 'fps-rect';
     rectEl.style.display = 'none';
     const label = document.createElement('div');
     label.className = 'fps-label';
-    const confirmBtn = mkBtn('开始截取', 'fps-btn fps-primary fps-confirm');
-    rectEl.append(label, confirmBtn);
+    rectEl.appendChild(label);
 
     overlay.appendChild(rectEl);
     shadow.append(overlay, toolbar);
@@ -59,6 +59,9 @@ window.FpsSelect = (() => {
     }
 
     function render() {
+      // 工具条为上下文式：有选区时主按钮是「截取」，无选区时是「截取整页」
+      actionBtn.innerHTML = rect ? '截取 <kbd>Enter</kbd>' : '截取整页';
+      hint.textContent = rect ? '拖拽任意处可重新框选' : '拖拽框选要截取的区域';
       if (!rect) { rectEl.style.display = 'none'; return; }
       rectEl.style.display = 'block';
       rectEl.style.left = rect.x + 'px';
@@ -86,8 +89,6 @@ window.FpsSelect = (() => {
       rect = null;
       render();
     });
-    // 选区内按下不触发重画（点「开始截取」）
-    rectEl.addEventListener('mousedown', (e) => e.stopPropagation());
 
     function onMove(e) {
       if (!origin) return;
@@ -100,9 +101,9 @@ window.FpsSelect = (() => {
     window.addEventListener('mousemove', onMove, true);
     window.addEventListener('mouseup', onUp, true);
 
-    confirmBtn.addEventListener('click', () => { if (rect) finish('confirm'); });
-    fullBtn.addEventListener('click', () => {
-      rect = { x: 0, y: 0, w: window.innerWidth, h: window.innerHeight, fromTop: true };
+    actionBtn.addEventListener('click', () => {
+      // 无选区 = 截取整页（全宽、从页首开始）
+      if (!rect) rect = { x: 0, y: 0, w: window.innerWidth, h: window.innerHeight, fromTop: true };
       finish('confirm');
     });
     cancelBtn.addEventListener('click', () => finish('cancel'));
@@ -121,6 +122,7 @@ window.FpsSelect = (() => {
     overlay.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
     overlay.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
 
+    render(); // 初始化工具条按钮文案（无选区 → 「截取整页」）
     return { close: () => finish('cancel') };
   }
 
