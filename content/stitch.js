@@ -86,5 +86,12 @@
     return contentHeight <= innerHeight ? 'align' : 'unsupported';
   }
 
-  return { planFrames, frameSlice, assignParts, cropRect, fitScale, pickScrollTarget, containerVisibility, MAX_PART_SIZE };
+  // 选区顶边的内容坐标 = selY（视口 y）− frameOriginY（内容坐标 0 在视口中的 y）。
+  // window 滚动时 frameOriginY = -scrollTop；内部容器时 = 内容盒视口 top − 容器 scrollTop。
+  // 选区顶边在内容起点之上时按 0 计；超出内容末尾的情况由调用方报错。
+  function selectionStartY(selY, frameOriginY) {
+    return Math.max(0, selY - frameOriginY);
+  }
+
+  return { planFrames, frameSlice, assignParts, cropRect, fitScale, pickScrollTarget, containerVisibility, selectionStartY, MAX_PART_SIZE };
 });

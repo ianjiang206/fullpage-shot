@@ -125,13 +125,23 @@ window.FpsCapture = (() => {
       }
       const viewportHeight = isWindow ? window.innerHeight : target.clientHeight;
       const contentHeight = target.scrollHeight;
-      const frames = window.FpsStitch.planFrames(contentHeight, viewportHeight);
+
+      // 纵向范围：从选区顶边（内容坐标）到内容末尾；「截取整页」带 fromTop 从 0 开始。
+      // 帧规划/分 part/切片的几何全部在"截取坐标系"（0 = startY）中进行，
+      // 滚动时再平移回内容坐标（setTop(frame + startY)）。
+      const frameOriginY = isWindow ? -getTop() : containerTop - target.scrollTop;
+      const startY = sel.fromTop ? 0 : window.FpsStitch.selectionStartY(sel.y, frameOriginY);
+      if (startY >= contentHeight) {
+        throw new Error('选区起点已在内容末尾之后，请重新框选');
+      }
+      const capContent = contentHeight - startY;
+      const frames = window.FpsStitch.planFrames(capContent, viewportHeight);
 
       for (let i = 0; i < frames.length; i++) {
         if (aborted) throw new Error('aborted');
         if (onProgress) onProgress(i + 1, frames.length);
 
-        setTop(frames[i]);
+        setTop(frames[i] + startY);
         await waitSettle(getTop);
         await sleep(LAZY_WAIT);
         const dataUrl = await requestFrame();
@@ -140,7 +150,7 @@ window.FpsCapture = (() => {
         if (dpr === null) {
           // 以首帧实测 dpr（img.width = innerWidth * 真实 dpr，含页面缩放）
           dpr = img.width / window.innerWidth;
-          parts = window.FpsStitch.assignParts(frames, viewportHeight, contentHeight, dpr);
+          parts = window.FpsStitch.assignParts(frames, viewportHeight, capContent, dpr);
           colRect = window.FpsStitch.cropRect(sel.x, sel.w, window.innerWidth, dpr);
           if (colRect.sw <= 0) throw new Error('裁剪列宽度为 0，请重新框选');
           canvases = parts.map((p) => {
@@ -154,7 +164,7 @@ window.FpsCapture = (() => {
         for (let p = 0; p < parts.length; p++) {
           const part = parts[p];
           if (i < part.frameStart || i >= part.frameEnd) continue;
-          const slice = window.FpsStitch.frameSlice(frames[i], viewportHeight, contentHeight, part.srcY, part.height);
+          const slice = window.FpsStitch.frameSlice(frames[i], viewportHeight, capContent, part.srcY, part.height);
           if (!slice) continue;
           canvases[p].getContext('2d').drawImage(
             img,
@@ -170,7 +180,7 @@ window.FpsCapture = (() => {
       return {
         parts: parts.map((p, idx) => ({ canvas: canvases[idx], srcY: p.srcY, heightCss: p.height })),
         width: colRect.sw,
-        totalHeight: Math.round(contentHeight * dpr),
+        totalHeight: Math.round(capContent * dpr),
         dpr,
       };
     } finally {

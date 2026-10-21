@@ -128,3 +128,15 @@ test('containerVisibility: 高于视口 → unsupported', () => {
   assert.equal(S.containerVisibility(100, 1200, 900), 'unsupported');
   assert.equal(S.containerVisibility(-100, 1200, 900), 'unsupported');
 });
+
+// --- selectionStartY ---
+test('selectionStartY: 视口坐标换算为内容坐标', () => {
+  // window：已滚动 2000，选区顶在视口 y=300 → 内容坐标 2300（frameOriginY = -2000）
+  assert.equal(S.selectionStartY(300, -2000), 2300);
+  // 容器：内容盒顶在视口 y=100，容器 scrollTop=500，选区顶在视口 y=150 → 内容坐标 550
+  assert.equal(S.selectionStartY(150, 100 - 500), 550);
+});
+
+test('selectionStartY: 选区顶在内容起点之上时按 0 计', () => {
+  assert.equal(S.selectionStartY(50, 100), 0);
+});

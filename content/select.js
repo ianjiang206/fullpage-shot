@@ -65,8 +65,8 @@ window.FpsSelect = (() => {
       rectEl.style.top = rect.y + 'px';
       rectEl.style.width = rect.w + 'px';
       rectEl.style.height = rect.h + 'px';
-      // 纵向永远覆盖整页高度（spec §5.1），label 如实告知
-      label.textContent = `宽 ${Math.round(rect.w)} px × 整页高度`;
+      // 纵向从选区顶边截到内容末尾（spec §5.1），label 如实告知
+      label.textContent = `宽 ${Math.round(rect.w)} px · 从此处截到页尾`;
     }
 
     function finish(kind) {
@@ -102,7 +102,7 @@ window.FpsSelect = (() => {
 
     confirmBtn.addEventListener('click', () => { if (rect) finish('confirm'); });
     fullBtn.addEventListener('click', () => {
-      rect = { x: 0, y: 0, w: window.innerWidth, h: window.innerHeight };
+      rect = { x: 0, y: 0, w: window.innerWidth, h: window.innerHeight, fromTop: true };
       finish('confirm');
     });
     cancelBtn.addEventListener('click', () => finish('cancel'));
