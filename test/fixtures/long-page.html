@@ -2,13 +2,13 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8">
-<title>FullPage Shot 测试页</title>
+<title>FullPage Shot test page</title>
 <style>
   body { margin: 0; font-family: system-ui, sans-serif; }
   .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 240px; background: #2c3e50; color: #fff; padding: 16px; overflow: hidden; }
   .sticky-header { position: sticky; top: 0; background: #e74c3c; color: #fff; padding: 12px; z-index: 10; }
   .sticky-section { position: sticky; top: 0; background: #27ae60; color: #fff; padding: 10px; z-index: 5; }
-  /* GitHub blob 工具栏模式：h:0 sticky 包装 + absolute 子元素渲染可见内容 */
+  /* GitHub blob toolbar pattern: an h:0 sticky wrapper whose visible content is an absolute child */
   .sticky-shell { position: sticky; top: 0; height: 0; z-index: 8; }
   .sticky-shell > .shell-bar { position: absolute; top: 0; left: 0; right: 0; height: 44px; background: #e67e22; color: #fff; display: flex; align-items: center; padding: 0 16px; box-sizing: border-box; }
   main { margin-left: 240px; }
@@ -20,15 +20,15 @@
 </style>
 </head>
 <body>
-  <nav class="sidebar">侧边栏（框选正文时应被排除）<ul id="nav"></ul></nav>
+  <nav class="sidebar">Sidebar (selecting the content column should exclude it)<ul id="nav"></ul></nav>
   <main>
-    <div class="sticky-header">Sticky 顶部栏（结果中只应出现一次）</div>
+    <div class="sticky-header">Sticky top bar (should appear exactly once in the result)</div>
     <div class="content" id="content"></div>
     <div class="inner-scroll" id="inner">
-      <h3>内部滚动容器</h3>
-      <p>框选此区域时，应滚动容器本身并截取其内部全部内容。</p>
+      <h3>Inner scroll container</h3>
+      <p>Selecting this region should scroll the container itself and capture all of its inner content.</p>
     </div>
-    <footer>页脚</footer>
+    <footer>Footer</footer>
   </main>
   <script>
     const TALL = location.hash === '#tall';
@@ -36,7 +36,7 @@
     const nav = document.getElementById('nav');
     for (let i = 1; i <= 40; i++) {
       const li = document.createElement('li');
-      li.textContent = '导航 ' + i;
+      li.textContent = 'Nav ' + i;
       nav.appendChild(li);
     }
     const content = document.getElementById('content');
@@ -44,28 +44,28 @@
       if (i === 30) {
         const sh = document.createElement('div');
         sh.className = 'sticky-section';
-        sh.textContent = '中部章节标题（sticky，应在其自然位置只出现一次）';
+        sh.textContent = 'Mid-content section header (sticky; should appear once at its natural position)';
         content.appendChild(sh);
       }
       if (i === 45) {
-        // 回归道具：h:0 sticky 包装 + absolute 工具栏，应只在自然位置出现一次
+        // Regression prop: h:0 sticky wrapper + absolute toolbar; should appear once at its natural position
         const shell = document.createElement('div');
         shell.className = 'sticky-shell';
         const bar = document.createElement('div');
         bar.className = 'shell-bar';
-        bar.textContent = '零高度 sticky 包装的工具栏（结果中只应出现一次）';
+        bar.textContent = 'Toolbar in a zero-height sticky wrapper (should appear exactly once in the result)';
         shell.appendChild(bar);
         content.appendChild(shell);
       }
       const p = document.createElement('p');
-      p.textContent = `第 ${i} 段：滚动拼接测试内容，用于检查接缝处文字是否连续。`.repeat(2);
+      p.textContent = `Paragraph ${i}: scroll-stitch test content for checking text continuity across seams. `.repeat(2);
       content.appendChild(p);
       if (i % 5 === 0) {
         const img = document.createElement('img');
         img.className = 'lazy-img';
         img.loading = 'lazy';
         img.width = 480; img.height = 120;
-        img.alt = '懒加载图 ' + i;
+        img.alt = 'lazy image ' + i;
         img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(
           `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="120">` +
           `<rect width="480" height="120" fill="hsl(${i * 6 % 360},60%,70%)"/>` +
@@ -76,10 +76,10 @@
     const inner = document.getElementById('inner');
     for (let i = 1; i <= 40; i++) {
       const p = document.createElement('p');
-      p.textContent = `容器内第 ${i} 行`;
+      p.textContent = `Container row ${i}`;
       inner.appendChild(p);
     }
-    // 道具：截取开始（首次滚动）800ms 后弹出的延时 cookie 弹窗——不应出现在截图中
+    // Prop: a delayed cookie banner that pops up 800ms after the first scroll — it must not enter the capture
     let popupShown = false;
     window.addEventListener('scroll', () => {
       if (popupShown) return;
@@ -88,7 +88,7 @@
         const b = document.createElement('div');
         b.style.cssText = 'position:fixed;right:16px;bottom:16px;width:280px;padding:16px;' +
           'background:#c0392b;color:#fff;border-radius:10px;z-index:9999;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,.4);';
-        b.textContent = '延时弹窗（截取中途出现，不应进入截图）';
+        b.textContent = 'Delayed popup (appears mid-capture; should NOT be in the result)';
         document.body.appendChild(b);
       }, 800);
     }, { once: false });

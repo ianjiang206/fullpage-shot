@@ -1,8 +1,10 @@
 'use strict';
-// 选区遮罩：拖拽框选；Enter/「开始截取」确认；Esc 取消；单击空白重画；「截取整页」直接全宽。
-// 样式经 shadow DOM + web_accessible_resources 注入的 overlay.css 隔离。
+// Selection overlay: drag a rectangle to select; Enter / the action button confirms;
+// Esc cancels; pressing anywhere on the mask redraws; with no selection the action
+// button is 「截取整页」 (full width, from the top).
+// Styles are isolated via shadow DOM + overlay.css injected through web_accessible_resources.
 window.FpsSelect = (() => {
-  const DRAG_THRESHOLD = 4; // px，小于此视为单击（重画）
+  const DRAG_THRESHOLD = 4; // px; smaller than this counts as a click (redraw)
   const SCROLL_KEYS = [' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End'];
 
   function mkBtn(text, cls) {
@@ -46,8 +48,8 @@ window.FpsSelect = (() => {
     shadow.append(overlay, toolbar);
     document.documentElement.appendChild(host);
 
-    let origin = null; // 拖拽起点 {x, y}
-    let rect = null;   // 选区 {x, y, w, h}，视口 CSS px
+    let origin = null; // drag start point {x, y}
+    let rect = null;   // selection {x, y, w, h} in viewport CSS px
     let done = false;
 
     function rectFrom(a, b) {
@@ -59,7 +61,8 @@ window.FpsSelect = (() => {
     }
 
     function render() {
-      // 工具条为上下文式：有选区时主按钮是「截取」，无选区时是「截取整页」
+      // Contextual toolbar: with a selection the action button is 「截取」,
+      // without one it is 「截取整页」
       actionBtn.innerHTML = rect ? '截取 <kbd>Enter</kbd>' : '截取整页';
       hint.textContent = rect ? '拖拽任意处可重新框选' : '拖拽框选要截取的区域';
       if (!rect) { rectEl.style.display = 'none'; return; }
@@ -68,7 +71,8 @@ window.FpsSelect = (() => {
       rectEl.style.top = rect.y + 'px';
       rectEl.style.width = rect.w + 'px';
       rectEl.style.height = rect.h + 'px';
-      // 纵向从选区顶边截到内容末尾（spec §5.1），label 如实告知
+      // Vertically we capture from the selection's top edge to the content end
+      // (spec §5.1); the label says so honestly
       label.textContent = `宽 ${Math.round(rect.w)} px · 从此处截到页尾`;
     }
 
@@ -93,7 +97,7 @@ window.FpsSelect = (() => {
     function onMove(e) {
       if (!origin) return;
       const next = rectFrom(origin, { x: e.clientX, y: e.clientY });
-      // 宽或高过小视为误触，回到未选状态
+      // too small in either dimension counts as a mis-touch; back to no selection
       rect = (next.w >= DRAG_THRESHOLD && next.h >= DRAG_THRESHOLD) ? next : null;
       render();
     }
@@ -102,7 +106,7 @@ window.FpsSelect = (() => {
     window.addEventListener('mouseup', onUp, true);
 
     actionBtn.addEventListener('click', () => {
-      // 无选区 = 截取整页（全宽、从页首开始）
+      // no selection = capture full page (full width, from the top)
       if (!rect) rect = { x: 0, y: 0, w: window.innerWidth, h: window.innerHeight, fromTop: true };
       finish('confirm');
     });
@@ -115,14 +119,14 @@ window.FpsSelect = (() => {
       } else if (e.key === 'Enter') {
         if (rect) { e.preventDefault(); finish('confirm'); }
       } else if (SCROLL_KEYS.includes(e.key)) {
-        e.preventDefault(); // 选区阶段锁定页面滚动
+        e.preventDefault(); // lock page scrolling while selecting
       }
     }
     document.addEventListener('keydown', onKey, true);
     overlay.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
     overlay.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
 
-    render(); // 初始化工具条按钮文案（无选区 → 「截取整页」）
+    render(); // initialize the toolbar button label (no selection → 「截取整页」)
     return { close: () => finish('cancel') };
   }
 

@@ -1,7 +1,7 @@
 :host { all: initial; }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* --- 选区遮罩 --- */
+/* --- Selection mask --- */
 .fps-overlay {
   position: fixed; inset: 0; z-index: 2147483647;
   cursor: crosshair; user-select: none;
@@ -30,7 +30,7 @@
 .fps-btn.fps-primary kbd { background: rgba(255,255,255,.18); }
 .fps-rect {
   position: absolute; border: 2px solid #1a73e8;
-  /* 用巨大外阴影调暗选区之外的一切，选区本身保持原样 */
+  /* A giant outer shadow dims everything outside the selection; the selection itself stays untouched */
   box-shadow: 0 0 0 9999px rgba(0,0,0,.3);
 }
 .fps-label {
@@ -39,7 +39,7 @@
   padding: 2px 8px; border-radius: 4px; white-space: nowrap;
 }
 
-/* --- 结果预览浮层 --- */
+/* --- Result preview overlay --- */
 .fps-card {
   position: fixed; inset: 0; z-index: 2147483647;
   display: flex; align-items: center; justify-content: center;

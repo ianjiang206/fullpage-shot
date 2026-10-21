@@ -1,38 +1,38 @@
 # FullPage Shot
 
-框选区域，滚动拼接截取整个网页内容的 Chrome 扩展（MV3，无外部依赖）。
+A Chrome extension (MV3, zero dependencies) that captures a full webpage by scrolling and stitching, with region selection to exclude sidebars and other irrelevant content.
 
-## 安装
+## Install
 
-1. `chrome://extensions` → 打开「开发者模式」
-2. 「加载已解压的扩展程序」→ 选择本目录
+1. `chrome://extensions` → enable "Developer mode"
+2. "Load unpacked" → select this directory
 
-## 使用
+## Usage
 
-1. 在目标页面点击工具栏图标
-2. 拖拽框选要保留的内容列（sidebar 等无关区域留在框外即可），或点「截取整页」
-3. Enter /「开始截取」→ 自动滚动拼接（期间按 Esc 取消）
-4. 预览浮层中「下载 PNG」或「复制到剪贴板」
+1. Click the toolbar icon on the target page
+2. Drag a rectangle around the content column to keep (leave sidebars outside the box), or click 「截取整页」
+3. Enter / the action button → the page scrolls and stitches automatically (Esc cancels)
+4. In the preview overlay: 「下载 PNG」 or 「复制到剪贴板」
 
-## 行为说明
+## Behavior notes
 
-- 选区的横向范围固定为裁剪列；纵向从选区顶边截到内容末尾（「截取整页」则从页首开始）
-- 自动探测内部滚动容器（选区中心最近的 `scrollHeight > clientHeight` 祖先）；截取前会先滚动页面让容器完整可见，高于视口的容器会提示改用「截取整页」
-- fixed / 已吸顶的 sticky 元素（如导航栏）：框选时覆盖了它，就在结果顶部按原样出现一次；没覆盖就不出现、也不遮挡内容。未吸顶的 sticky 元素作为正常内容在其自然位置出现一次
-- 超过半视口高的 sticky 视为滚动叙事内容（scroll-jacking），永不隐藏——它会在长图里按滚动进度出现多次，这是线性图片对滚动动画的固有表达
-- 截取前会先自动"预热"滚动一遍（badge 显示"预热"），触发懒加载图片/iframe 和滚动 reveal 动画；截取中途新弹出的 fixed 元素（如延时 cookie 弹窗）会被自动隐藏
-- 拼接高度超过 16384px（× dpr）时自动拆分为多张 PNG；剪贴板复制则等比缩放为单图
-- 进度显示在扩展图标 badge 上（i/n）
+- The selection's horizontal range becomes the fixed crop column; vertically the capture runs from the selection's top edge to the content end (「截取整页」 starts from the top)
+- Inner scroll containers are auto-detected (nearest scrollable ancestor of the selection center with `scrollHeight > clientHeight`); before capturing, the page scrolls so the container is fully visible — containers taller than the viewport are rejected with a message suggesting 「截取整页」
+- fixed / stuck sticky elements (e.g. navbars): if the selection covered them, they appear once at the top of the result as seen; otherwise they never appear and never occlude content. An unstuck sticky appears once at its natural position as normal content
+- Stickies taller than half the viewport are treated as scroll-jacking content and are never hidden — they appear multiple times down the long image as scroll progresses, which is the inherent expression of scroll animation in a linear image
+- Before capturing, the page is scrolled through once as a warm-up (badge shows "预热") to trigger lazy images/iframes and scroll reveal animations; fixed elements that pop up mid-capture (e.g. delayed cookie banners) are hidden automatically
+- Stitched height beyond 16384px (× dpr) is split into multiple PNGs; clipboard copy produces a single image scaled down to fit
+- Progress is shown on the extension icon badge (i/n)
 
-## 已知限制
+## Known limitations
 
-- `chrome://`、Chrome Web Store、内置 PDF 查看器等页面无法注入（图标显示 "!"）
-- 懒加载内容依赖滚动经过 + 300ms 等待唤醒，极端懒加载策略可能漏图
-- 截取期间页面若持续变化（无限滚动增长），以截取开始时的高度为准
-- iframe 内部内容无法参与滚动容器探测（截图本身会包含 iframe 画面）
+- Cannot inject into `chrome://` pages, the Chrome Web Store, or the built-in PDF viewer (icon shows "!")
+- Lazy content relies on scroll-passing + a 300ms wait to wake up; extreme lazy-loading strategies may still miss images
+- If the page keeps changing during capture (infinite scroll growth), the content height recorded at capture start is authoritative
+- Content inside iframes does not participate in scroll-container detection (the screenshot itself still includes iframe pixels)
 
-## 开发
+## Development
 
-- `node --test test/`：stitch.js 纯函数单测
-- `python3 -m http.server 8000` 后访问 `http://localhost:8000/test/fixtures/long-page.html`（`#tall` 为超长模式）做手工测试
-- `node scripts/make-icons.js`：重新生成图标
+- `node --test test/`: unit tests for the stitch.js pure functions
+- `python3 -m http.server 8000` then open `http://localhost:8000/test/fixtures/long-page.html` for manual testing (`#tall` = oversized mode)
+- `node scripts/make-icons.js`: regenerate the icons

@@ -1,5 +1,6 @@
 'use strict';
-// 结果预览浮层：缩略图 + 下载 PNG（多 part 依次下载）+ 复制到剪贴板（超长自动缩放）+ 重选/关闭。
+// Result preview overlay: thumbnail + PNG download (multi-part downloads in sequence)
+// + copy to clipboard (oversized images auto-scaled) + retry/close.
 window.FpsPreview = (() => {
 
   function mkBtn(text, cls) {
@@ -26,7 +27,7 @@ window.FpsPreview = (() => {
     return { host, card, panel };
   }
 
-  // 把 parts 拼成单张 blob；超过 MAX_PART_SIZE 时等比缩小（剪贴板只支持单图）
+  // Stitch parts into a single blob; scale down past MAX_PART_SIZE (clipboard takes one image only)
   function buildSingleBlob(parts, width, totalHeight, dpr) {
     const scale = window.FpsStitch.fitScale(width, totalHeight);
     const c = document.createElement('canvas');
@@ -58,7 +59,7 @@ window.FpsPreview = (() => {
           a.click();
           setTimeout(() => URL.revokeObjectURL(a.href), 10000);
         }, 'image/png');
-      }, i * 400); // 多文件错开，避免浏览器拦截连续下载
+      }, i * 400); // stagger multiple downloads so the browser doesn't block them
     });
   }
 
@@ -128,7 +129,7 @@ window.FpsPreview = (() => {
     });
 
     retryBtn.addEventListener('click', () => {
-      close(); // 触发 onClose（状态归 idle）
+      close(); // triggers onClose (state back to idle)
       if (onRetry) onRetry();
     });
     closeBtn.addEventListener('click', () => close());

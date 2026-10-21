@@ -1,11 +1,11 @@
 'use strict';
-// 协调状态机：idle → selecting → capturing → preview →（重选回 selecting / 关闭回 idle）
+// State machine: idle → selecting → capturing → preview → (retry back to selecting / close back to idle)
 (function () {
   if (window.__fpsMainLoaded) return;
   window.__fpsMainLoaded = true;
 
   let phase = 'idle'; // idle | selecting | capturing | preview
-  let ui = null;      // 当前浮层的 {close()}
+  let ui = null;      // current overlay's {close()}
 
   function twoFrames() {
     return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -16,7 +16,7 @@
   }, true);
 
   function start() {
-    if (phase !== 'idle') return; // 已有流程在进行，忽略重复点击
+    if (phase !== 'idle') return; // a flow is already running; ignore repeated clicks
     beginSelect();
   }
 
@@ -29,9 +29,9 @@
   }
 
   async function onConfirm(sel) {
-    ui = null; // 选区浮层已自行移除
+    ui = null; // the selection overlay has already removed itself
     phase = 'capturing';
-    await twoFrames(); // 等遮罩真正离开合成帧，避免出现在首帧里
+    await twoFrames(); // wait for the mask to actually leave composited frames so it never appears in frame 0
     try {
       const result = await window.FpsCapture.capture(sel, (i, n) => {
         chrome.runtime.sendMessage({ type: 'fps:progress', text: `${i}/${n}` });
@@ -44,7 +44,7 @@
       });
     } catch (e) {
       if (e && e.message === 'aborted') {
-        phase = 'idle'; // 用户 Esc 取消：静默回到 idle
+        phase = 'idle'; // user cancelled with Esc: silently back to idle
         return;
       }
       phase = 'preview';

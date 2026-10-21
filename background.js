@@ -1,13 +1,13 @@
 'use strict';
 
-// 后续任务会往这里追加 content/stitch.js、content/select.js 等
+// Injection order matters: stitch.js defines window.FpsStitch used by the rest.
 const CONTENT_FILES = ['content/stitch.js', 'content/select.js', 'content/capture.js', 'content/preview.js', 'content/main.js'];
 const DEFAULT_TITLE = '截取页面';
 
 function ping(tabId) {
   return new Promise((resolve) => {
     chrome.tabs.sendMessage(tabId, { type: 'fps:ping' }, (resp) => {
-      // 未注入时 sendMessage 报 lastError，必须读取以消除控制台警告
+      // Without injection sendMessage sets lastError; reading it suppresses the console warning.
       resolve(!chrome.runtime.lastError && !!resp && resp.ok === true);
     });
   });
@@ -45,7 +45,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         sendResponse({ dataUrl });
       }
     });
-    return true; // 异步 sendResponse
+    return true; // async sendResponse
   }
   if (msg.type === 'fps:progress') {
     chrome.action.setBadgeBackgroundColor({ tabId, color: '#1a73e8' });

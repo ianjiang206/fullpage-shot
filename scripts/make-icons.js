@@ -1,6 +1,6 @@
 'use strict';
-// 生成 icons/icon{16,32,48,128}.png —— 纯 node 标准库，无依赖。
-// 图案：蓝色方块底 + 白色取景框 + 中央镜头圆点。
+// Generates icons/icon{16,32,48,128}.png — pure node stdlib, no dependencies.
+// Design: blue square + white viewfinder frame + central lens dot.
 const zlib = require('zlib');
 const fs = require('fs');
 const path = require('path');
@@ -33,8 +33,8 @@ function chunk(type, data) {
 }
 
 function pixel(x, y, size) {
-  const u = size / 128; // 设计坐标 128×128
-  let r = 0x1a, g = 0x73, b = 0xe8; // 底色 #1a73e8
+  const u = size / 128; // design coordinates are 128×128
+  let r = 0x1a, g = 0x73, b = 0xe8; // base color #1a73e8
   const inRect = (x0, y0, x1, y1) => x >= x0 * u && x < x1 * u && y >= y0 * u && y < y1 * u;
   const onFrame =
     inRect(14, 14, 114, 24) || inRect(14, 104, 114, 114) ||
@@ -49,7 +49,7 @@ function makePng(size) {
   const raw = Buffer.alloc(size * (size * 4 + 1));
   let p = 0;
   for (let y = 0; y < size; y++) {
-    raw[p++] = 0; // 每行 filter 字节：none
+    raw[p++] = 0; // per-row filter byte: none
     for (let x = 0; x < size; x++) {
       const [r, g, b, a] = pixel(x, y, size);
       raw[p++] = r; raw[p++] = g; raw[p++] = b; raw[p++] = a;

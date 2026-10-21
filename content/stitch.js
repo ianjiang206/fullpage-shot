@@ -1,17 +1,20 @@
 'use strict';
-// 纯函数模块：帧规划、帧/part 交集、分 part、裁剪列换算、缩放比、滚动容器选择。
-// 无 DOM/Chrome 依赖，node 可直接 require 单测；浏览器里挂载为 window.FpsStitch。
+// Pure-function module: frame planning, frame/part intersection, part assignment,
+// crop-column mapping, fit scale, scroll-container selection.
+// No DOM/Chrome dependencies — node can require it directly for unit tests;
+// in the browser it mounts as window.FpsStitch.
 (function (root, factory) {
   const api = factory();
   root.FpsStitch = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof self !== 'undefined' ? self : globalThis, function () {
-  const MAX_PART_SIZE = 16384; // Chrome canvas 单边保守上限（device px）
+  const MAX_PART_SIZE = 16384; // conservative Chrome canvas max dimension (device px)
 
-  // 帧滚动位置：步长 = viewportHeight，末帧底对齐；内容不超一屏 → [0]。
+  // Frame scroll positions: step = viewportHeight, last frame bottom-aligned;
+  // content within one screen → [0].
   function planFrames(contentHeight, viewportHeight) {
     if (!(contentHeight > 0) || !(viewportHeight > 0)) {
-      throw new Error('planFrames: contentHeight/viewportHeight 必须为正数');
+      throw new Error('planFrames: contentHeight/viewportHeight must be positive');
     }
     const maxScroll = contentHeight - viewportHeight;
     if (maxScroll <= 0) return [0];
@@ -24,9 +27,10 @@
     return ys;
   }
 
-  // 帧（[frameTop, frameTop+viewportHeight)，不越 contentHeight）与 part 带
-  // （[bandSrcY, bandSrcY+bandHeight)）的交集。
-  // 返回 {sy: 帧内源起点, sh: 源高度, dy: part 内目标起点}（CSS px），不重叠返回 null。
+  // Intersection of a frame ([frameTop, frameTop+viewportHeight), clamped to
+  // contentHeight) with a part band ([bandSrcY, bandSrcY+bandHeight)).
+  // Returns {sy: source offset within frame, sh: source height, dy: destination
+  // offset within part} in CSS px, or null when there is no overlap.
   function frameSlice(frameTop, viewportHeight, contentHeight, bandSrcY, bandHeight) {
     const frameBottom = Math.min(frameTop + viewportHeight, contentHeight);
     const visTop = Math.max(frameTop, bandSrcY);
@@ -35,12 +39,13 @@
     return { sy: visTop - frameTop, sh: visBottom - visTop, dy: visTop - bandSrcY };
   }
 
-  // 沿帧边界把帧序列分进若干 part 带。带与带连续、无重叠，覆盖 [0, contentHeight)。
-  // 返回 [{srcY, height, frameStart, frameEnd}]，帧下标范围 [frameStart, frameEnd)。
+  // Distribute the frame sequence into part bands along frame boundaries.
+  // Bands are contiguous, non-overlapping, and cover [0, contentHeight).
+  // Returns [{srcY, height, frameStart, frameEnd}] with frame index range [frameStart, frameEnd).
   function assignParts(frames, viewportHeight, contentHeight, dpr, maxPartSize) {
     const max = maxPartSize || MAX_PART_SIZE;
     if (viewportHeight * dpr > max) {
-      throw new Error(`单帧高度 ${Math.round(viewportHeight * dpr)}px 超过 part 上限 ${max}px，无法拼接`);
+      throw new Error(`single frame height ${Math.round(viewportHeight * dpr)}px exceeds part limit ${max}px; cannot stitch`);
     }
     const parts = [];
     let start = 0;
@@ -56,20 +61,22 @@
     return parts;
   }
 
-  // 选区（视口 CSS px）→ 帧图源矩形横向范围（device px），clamp 到视口。
+  // Selection (viewport CSS px) → horizontal source range of the frame image
+  // (device px), clamped to the viewport.
   function cropRect(selX, selW, viewportWidth, dpr) {
     const sx = Math.max(0, Math.round(selX * dpr));
     const right = Math.min(Math.round((selX + selW) * dpr), Math.round(viewportWidth * dpr));
     return { sx, sw: Math.max(0, right - sx) };
   }
 
-  // 单图（剪贴板用）缩放比：不超过 maxSize 时为 1。
+  // Scale factor for a single image (clipboard use): 1 when within maxSize.
   function fitScale(width, height, maxSize) {
     const max = maxSize || MAX_PART_SIZE;
     return Math.min(1, max / Math.max(width, height));
   }
 
-  // candidates 从深到浅 [{el, scrollHeight, clientHeight}]，返回第一个可滚动的 el。
+  // candidates are ordered deepest-first [{el, scrollHeight, clientHeight}];
+  // returns the first scrollable el.
   function pickScrollTarget(candidates) {
     for (const c of candidates) {
       if (c.scrollHeight > c.clientHeight + 8) return c.el;
@@ -77,44 +84,53 @@
     return null;
   }
 
-  // 内部滚动容器内容盒在视口中的可见性处置：
-  //   'ok'          已完整可见（[top, top+height] ⊆ [0, innerHeight]）
-  //   'align'       可通过 window 顶对齐滚动变为完整可见（高度 ≤ 视口）
-  //   'unsupported' 高于视口，无法完整对齐
+  // How to handle an inner scroll container's content-box visibility in the viewport:
+  //   'ok'          already fully visible ([top, top+height] ⊆ [0, innerHeight])
+  //   'align'       can become fully visible by top-aligning via window scroll (height ≤ viewport)
+  //   'unsupported' taller than the viewport, cannot be fully aligned
   function containerVisibility(contentTop, contentHeight, innerHeight) {
     if (contentTop >= 0 && contentTop + contentHeight <= innerHeight) return 'ok';
     return contentHeight <= innerHeight ? 'align' : 'unsupported';
   }
 
-  // 选区顶边的内容坐标 = selY（视口 y）− frameOriginY（内容坐标 0 在视口中的 y）。
-  // window 滚动时 frameOriginY = -scrollTop；内部容器时 = 内容盒视口 top − 容器 scrollTop。
-  // 选区顶边在内容起点之上时按 0 计；超出内容末尾的情况由调用方报错。
+  // Content coordinate of the selection's top edge = selY (viewport y) − frameOriginY
+  // (the viewport y of content coordinate 0). For window scrolling frameOriginY =
+  // -scrollTop; for an inner container it is content-box viewport top − container
+  // scrollTop. A selection top above the content start counts as 0; the caller
+  // reports an error when it is past the content end.
   function selectionStartY(selY, frameOriginY) {
     return Math.max(0, selY - frameOriginY);
   }
 
-  // sticky 元素在某帧是否应可见：仅在未吸顶（帧滚动位置未越过 自然位置 − cssTop）时可见，
-  // 即只在自然文档位置被截取一次，吸顶后隐藏，避免重复与遮挡。
+  // Whether a sticky element should be visible in a given frame: only while not
+  // stuck (frame scroll position has not passed naturalTop − cssTop) — i.e. it is
+  // captured exactly once at its natural document position and hidden once stuck,
+  // avoiding duplicates and occlusion.
   function stickyVisible(scrollTopContent, naturalTop, cssTop) {
     return scrollTopContent <= naturalTop - cssTop;
   }
 
-  // 两个矩形是否相交（同一坐标系，{left, right, top, bottom}）。边缘相接不算相交。
+  // Whether two rects intersect (same coordinate system, {left, right, top, bottom}).
+  // Edge-touching does not count as overlap.
   function rectsOverlap(a, b) {
     return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
   }
 
-  // sticky 是否属于"内容本体"（滚动叙事容器）：高度超过半个视口的 sticky 是内容，
-  // 永不隐藏（它会在长图里按滚动进度出现多次——线性图片对滚动动画的固有表达）；
-  // 小的 sticky 是 UI chrome（导航栏等），走 stickyVisible / 选区覆盖规则。
+  // Whether a sticky element is "content body" (scroll-jacking container): a sticky
+  // taller than half the viewport is content and is never hidden (it appears
+  // multiple times down the long image as scroll progresses — the inherent
+  // expression of scroll animation in a linear image); small stickies are UI chrome
+  // (navbars etc.) and follow stickyVisible / selection-overlap rules.
   function stickyIsContent(elHeight, viewportHeight) {
     return elHeight > viewportHeight / 2;
   }
 
-  // 元素的视觉矩形：自身有面积时用自身；零面积（如 h:0 的 sticky 包装，GitHub blob
-  // 工具栏模式——可见内容在 absolute 后代里）时取可见后代矩形的包围盒；
-  // 零面积且无可见后代返回 null（调用方不应收集/管理它）。
-  // 矩形为 {left, right, top, bottom}，childRects 为同类数组或 null。
+  // An element's visual rect: its own rect when it has area; for zero-area elements
+  // (e.g. an h:0 sticky wrapper — the GitHub blob toolbar pattern, where visible
+  // content lives in absolute-positioned descendants) the bounding box of visible
+  // descendant rects; null when zero-area with no visible descendants (the caller
+  // should not collect/manage it).
+  // Rects are {left, right, top, bottom}; childRects is an array of the same, or null.
   function visualRect(own, childRects) {
     if (own.right > own.left && own.bottom > own.top) return own;
     if (!childRects || childRects.length === 0) return null;
