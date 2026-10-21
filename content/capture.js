@@ -34,7 +34,7 @@ window.FpsCapture = (() => {
       if (cs.display === 'none' || cs.visibility === 'hidden') continue;
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
-      out.push({ el, prev: el.style.visibility, sticky: cs.position === 'sticky', cssTop: parseFloat(cs.top) || 0 });
+      out.push({ el, prev: el.style.visibility, sticky: cs.position === 'sticky', cssTop: parseFloat(cs.top) || 0, height: r.height });
     }
     return out;
   }
@@ -147,10 +147,12 @@ window.FpsCapture = (() => {
 
       // sticky 元素的自然文档位置（内容坐标）：临时切 relative + top:auto 测量
       // （sticky 与 relative 的流内占位一致），测完恢复。
-      // fixed 元素与容器外元素没有内容坐标意义上的自然位置，naturalTop 保持 null（全程隐藏）。
+      // fixed 元素与容器外元素没有内容坐标意义上的自然位置，naturalTop 保持 null（全程隐藏）；
+      // 内容级 sticky（高过半视口，如滚动叙事容器）永不隐藏，无需测量。
       for (const f of fixed) {
         f.naturalTop = null;
         if (!f.sticky || (!isWindow && !target.contains(f.el))) continue;
+        if (window.FpsStitch.stickyIsContent(f.height, viewportHeight)) continue;
         const prevPos = f.el.style.position;
         const prevTop = f.el.style.top;
         f.el.style.position = 'relative';
@@ -172,8 +174,10 @@ window.FpsCapture = (() => {
         // 每帧截屏前设置遮挡元素可见性。语义（所见即所得）：
         // 1) sticky 未吸顶时是流内内容，在自然位置帧可见一次；
         // 2) fixed / 已吸顶的 sticky 仅在框选时刻与选区相交时，于首帧按原样出现一次；
-        // 3) 其余情况隐藏，不重复、不遮挡
+        // 3) 内容级 sticky（高过半视口，如滚动叙事容器）永不隐藏；
+        // 4) 其余情况隐藏，不重复、不遮挡
         for (const f of fixed) {
+          if (f.sticky && window.FpsStitch.stickyIsContent(f.height, viewportHeight)) continue;
           const atNaturalPlace = f.sticky && f.naturalTop !== null &&
             window.FpsStitch.stickyVisible(frames[i] + startY, f.naturalTop, f.cssTop);
           const visible = atNaturalPlace || (i === 0 && f.inSelection);

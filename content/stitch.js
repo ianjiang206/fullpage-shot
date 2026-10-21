@@ -104,5 +104,12 @@
     return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
   }
 
-  return { planFrames, frameSlice, assignParts, cropRect, fitScale, pickScrollTarget, containerVisibility, selectionStartY, stickyVisible, rectsOverlap, MAX_PART_SIZE };
+  // sticky 是否属于"内容本体"（滚动叙事容器）：高度超过半个视口的 sticky 是内容，
+  // 永不隐藏（它会在长图里按滚动进度出现多次——线性图片对滚动动画的固有表达）；
+  // 小的 sticky 是 UI chrome（导航栏等），走 stickyVisible / 选区覆盖规则。
+  function stickyIsContent(elHeight, viewportHeight) {
+    return elHeight > viewportHeight / 2;
+  }
+
+  return { planFrames, frameSlice, assignParts, cropRect, fitScale, pickScrollTarget, containerVisibility, selectionStartY, stickyVisible, rectsOverlap, stickyIsContent, MAX_PART_SIZE };
 });

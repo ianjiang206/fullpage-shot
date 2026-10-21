@@ -162,3 +162,11 @@ test('rectsOverlap: 相交判定', () => {
   assert.equal(S.rectsOverlap({ left: 0, right: 100, top: 0, bottom: 10 }, sel), false);  // 选区在其下方
   assert.equal(S.rectsOverlap({ left: 60, right: 100, top: 30, bottom: 60 }, sel), false); // 横向不相交
 });
+
+// --- stickyIsContent ---
+test('stickyIsContent: 超过半视口高的 sticky 是内容，永不隐藏', () => {
+  assert.equal(S.stickyIsContent(900, 900), true);   // 100vh 滚动叙事容器
+  assert.equal(S.stickyIsContent(451, 900), true);   // 恰好越过一半
+  assert.equal(S.stickyIsContent(450, 900), false);  // 恰好一半仍算 chrome
+  assert.equal(S.stickyIsContent(40, 900), false);   // 导航栏
+});
