@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "FullPage Shot",
+  "version": "0.1.0",
+  "description": "框选区域，滚动拼接截取整个网页内容。",
+  "permissions": ["activeTab", "scripting"],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_title": "截取页面",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    { "resources": ["overlay.css"], "matches": ["<all_urls>"] }
+  ]
+}

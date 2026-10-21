@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>FullPage Shot 测试页</title>
+<style>
+  body { margin: 0; font-family: system-ui, sans-serif; }
+  .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 240px; background: #2c3e50; color: #fff; padding: 16px; overflow: hidden; }
+  .sticky-header { position: sticky; top: 0; background: #e74c3c; color: #fff; padding: 12px; z-index: 10; }
+  main { margin-left: 240px; }
+  .content { padding: 24px; max-width: 640px; }
+  .content p { font-size: 15px; line-height: 1.8; }
+  .lazy-img { display: block; margin: 16px 0; }
+  .inner-scroll { height: 360px; overflow: auto; border: 3px solid #8e44ad; margin: 24px; padding: 16px; background: #faf5ff; }
+  footer { background: #34495e; color: #fff; padding: 40px 24px; }
+</style>
+</head>
+<body>
+  <nav class="sidebar">侧边栏（框选正文时应被排除）<ul id="nav"></ul></nav>
+  <main>
+    <div class="sticky-header">Sticky 顶部栏（结果中只应出现一次）</div>
+    <div class="content" id="content"></div>
+    <div class="inner-scroll" id="inner">
+      <h3>内部滚动容器</h3>
+      <p>框选此区域时，应滚动容器本身并截取其内部全部内容。</p>
+    </div>
+    <footer>页脚</footer>
+  </main>
+  <script>
+    const TALL = location.hash === '#tall';
+    const PARAS = TALL ? 400 : 60;
+    const nav = document.getElementById('nav');
+    for (let i = 1; i <= 40; i++) {
+      const li = document.createElement('li');
+      li.textContent = '导航 ' + i;
+      nav.appendChild(li);
+    }
+    const content = document.getElementById('content');
+    for (let i = 1; i <= PARAS; i++) {
+      const p = document.createElement('p');
+      p.textContent = `第 ${i} 段：滚动拼接测试内容，用于检查接缝处文字是否连续。`.repeat(2);
+      content.appendChild(p);
+      if (i % 5 === 0) {
+        const img = document.createElement('img');
+        img.className = 'lazy-img';
+        img.loading = 'lazy';
+        img.width = 480; img.height = 120;
+        img.alt = '懒加载图 ' + i;
+        img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+          `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="120">` +
+          `<rect width="480" height="120" fill="hsl(${i * 6 % 360},60%,70%)"/>` +
+          `<text x="20" y="65" font-size="28">lazy image ${i}</text></svg>`);
+        content.appendChild(img);
+      }
+    }
+    const inner = document.getElementById('inner');
+    for (let i = 1; i <= 40; i++) {
+      const p = document.createElement('p');
+      p.textContent = `容器内第 ${i} 行`;
+      inner.appendChild(p);
+    }
+  </script>
+</body>
+</html>
