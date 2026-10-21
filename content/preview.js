@@ -118,7 +118,7 @@ window.FpsPreview = (() => {
       try {
         const scaled = window.FpsStitch.fitScale(width, totalHeight) < 1;
         const blob = await buildSingleBlob(parts, width, totalHeight, dpr);
-        await navigator.clipboard.write(new ClipboardItem({ 'image/png': blob }));
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
         note.textContent = scaled ? '已复制（超长，已等比缩放至上限内）' : '已复制到剪贴板';
       } catch (e) {
         note.textContent = '复制失败（' + (e && e.message ? e.message : e) + '），请使用下载';
