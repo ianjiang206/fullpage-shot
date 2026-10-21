@@ -7,6 +7,7 @@
   body { margin: 0; font-family: system-ui, sans-serif; }
   .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 240px; background: #2c3e50; color: #fff; padding: 16px; overflow: hidden; }
   .sticky-header { position: sticky; top: 0; background: #e74c3c; color: #fff; padding: 12px; z-index: 10; }
+  .sticky-section { position: sticky; top: 0; background: #27ae60; color: #fff; padding: 10px; z-index: 5; }
   main { margin-left: 240px; }
   .content { padding: 24px; max-width: 640px; }
   .content p { font-size: 15px; line-height: 1.8; }
@@ -37,6 +38,12 @@
     }
     const content = document.getElementById('content');
     for (let i = 1; i <= PARAS; i++) {
+      if (i === 30) {
+        const sh = document.createElement('div');
+        sh.className = 'sticky-section';
+        sh.textContent = '中部章节标题（sticky，应在其自然位置只出现一次）';
+        content.appendChild(sh);
+      }
       const p = document.createElement('p');
       p.textContent = `第 ${i} 段：滚动拼接测试内容，用于检查接缝处文字是否连续。`.repeat(2);
       content.appendChild(p);

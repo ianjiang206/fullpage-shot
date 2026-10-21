@@ -93,5 +93,11 @@
     return Math.max(0, selY - frameOriginY);
   }
 
-  return { planFrames, frameSlice, assignParts, cropRect, fitScale, pickScrollTarget, containerVisibility, selectionStartY, MAX_PART_SIZE };
+  // sticky 元素在某帧是否应可见：仅在未吸顶（帧滚动位置未越过 自然位置 − cssTop）时可见，
+  // 即只在自然文档位置被截取一次，吸顶后隐藏，避免重复与遮挡。
+  function stickyVisible(scrollTopContent, naturalTop, cssTop) {
+    return scrollTopContent <= naturalTop - cssTop;
+  }
+
+  return { planFrames, frameSlice, assignParts, cropRect, fitScale, pickScrollTarget, containerVisibility, selectionStartY, stickyVisible, MAX_PART_SIZE };
 });

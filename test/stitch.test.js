@@ -140,3 +140,16 @@ test('selectionStartY: 视口坐标换算为内容坐标', () => {
 test('selectionStartY: 选区顶在内容起点之上时按 0 计', () => {
   assert.equal(S.selectionStartY(50, 100), 0);
 });
+
+// --- stickyVisible ---
+test('stickyVisible: 未吸顶时可见，吸顶后隐藏', () => {
+  assert.equal(S.stickyVisible(0, 260, 0), true);   // 页首帧，元素在自然位置
+  assert.equal(S.stickyVisible(260, 260, 0), true); // 恰好到达边界仍算自然位置
+  assert.equal(S.stickyVisible(261, 260, 0), false); // 已吸顶
+});
+
+test('stickyVisible: 计入 cssTop 偏移', () => {
+  // top: 10px 的 sticky 在 scrollTop > naturalTop - 10 时吸顶
+  assert.equal(S.stickyVisible(250, 260, 10), true);
+  assert.equal(S.stickyVisible(251, 260, 10), false);
+});

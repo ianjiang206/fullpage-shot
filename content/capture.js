@@ -34,7 +34,7 @@ window.FpsCapture = (() => {
       if (cs.display === 'none' || cs.visibility === 'hidden') continue;
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
-      out.push({ el, prev: el.style.visibility });
+      out.push({ el, prev: el.style.visibility, sticky: cs.position === 'sticky', cssTop: parseFloat(cs.top) || 0 });
     }
     return out;
   }
@@ -137,12 +137,37 @@ window.FpsCapture = (() => {
       const capContent = contentHeight - startY;
       const frames = window.FpsStitch.planFrames(capContent, viewportHeight);
 
+      // sticky 元素的自然文档位置（内容坐标）：临时切 relative + top:auto 测量
+      // （sticky 与 relative 的流内占位一致），测完恢复。
+      // fixed 元素与容器外元素没有内容坐标意义上的自然位置，naturalTop 保持 null（全程隐藏）。
+      for (const f of fixed) {
+        f.naturalTop = null;
+        if (!f.sticky || (!isWindow && !target.contains(f.el))) continue;
+        const prevPos = f.el.style.position;
+        const prevTop = f.el.style.top;
+        f.el.style.position = 'relative';
+        f.el.style.top = 'auto';
+        const rect = f.el.getBoundingClientRect();
+        f.naturalTop = isWindow
+          ? rect.top + getTop()
+          : rect.top - containerTop + target.scrollTop;
+        f.el.style.position = prevPos;
+        f.el.style.top = prevTop;
+      }
+
       for (let i = 0; i < frames.length; i++) {
         if (aborted) throw new Error('aborted');
         if (onProgress) onProgress(i + 1, frames.length);
 
         setTop(frames[i] + startY);
         await waitSettle(getTop);
+        // 每帧截屏前设置遮挡元素可见性：fixed 一律隐藏（无文档位置，出现即遮挡）；
+        // sticky 只在未吸顶的帧可见（自然位置截一次），吸顶后隐藏
+        for (const f of fixed) {
+          const visible = f.sticky && f.naturalTop !== null &&
+            window.FpsStitch.stickyVisible(frames[i] + startY, f.naturalTop, f.cssTop);
+          f.el.style.visibility = visible ? f.prev : 'hidden';
+        }
         await sleep(LAZY_WAIT);
         const dataUrl = await requestFrame();
         const img = await toBitmap(dataUrl);
@@ -172,9 +197,6 @@ window.FpsCapture = (() => {
             0, Math.round(slice.dy * dpr), colRect.sw, Math.round(slice.sh * dpr),
           );
         }
-
-        // 首帧绘制完成后再隐藏 fixed/sticky（让它们只在顶部出现一次）
-        if (i === 0) for (const f of fixed) f.el.style.visibility = 'hidden';
       }
 
       return {
