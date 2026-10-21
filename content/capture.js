@@ -101,6 +101,14 @@ window.FpsCapture = (() => {
     }
 
     const fixed = collectFixedElements();
+    // 记录框选时刻各元素是否与选区相交（视口坐标，此刻页面尚未滚动）。
+    // fixed/吸顶元素在任意滚动位置的视觉位置不变，故该判定对截取全程有效。
+    const selBounds = { left: sel.x, right: sel.x + sel.w, top: sel.y, bottom: sel.y + sel.h };
+    for (const f of fixed) {
+      const r = f.el.getBoundingClientRect();
+      f.inSelection = window.FpsStitch.rectsOverlap(
+        { left: r.left, right: r.right, top: r.top, bottom: r.bottom }, selBounds);
+    }
 
     let dpr = null;
     let parts = null;
@@ -161,11 +169,14 @@ window.FpsCapture = (() => {
 
         setTop(frames[i] + startY);
         await waitSettle(getTop);
-        // 每帧截屏前设置遮挡元素可见性：fixed 一律隐藏（无文档位置，出现即遮挡）；
-        // sticky 只在未吸顶的帧可见（自然位置截一次），吸顶后隐藏
+        // 每帧截屏前设置遮挡元素可见性。语义（所见即所得）：
+        // 1) sticky 未吸顶时是流内内容，在自然位置帧可见一次；
+        // 2) fixed / 已吸顶的 sticky 仅在框选时刻与选区相交时，于首帧按原样出现一次；
+        // 3) 其余情况隐藏，不重复、不遮挡
         for (const f of fixed) {
-          const visible = f.sticky && f.naturalTop !== null &&
+          const atNaturalPlace = f.sticky && f.naturalTop !== null &&
             window.FpsStitch.stickyVisible(frames[i] + startY, f.naturalTop, f.cssTop);
+          const visible = atNaturalPlace || (i === 0 && f.inSelection);
           f.el.style.visibility = visible ? f.prev : 'hidden';
         }
         await sleep(LAZY_WAIT);

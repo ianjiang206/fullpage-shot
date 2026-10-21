@@ -99,5 +99,10 @@
     return scrollTopContent <= naturalTop - cssTop;
   }
 
-  return { planFrames, frameSlice, assignParts, cropRect, fitScale, pickScrollTarget, containerVisibility, selectionStartY, stickyVisible, MAX_PART_SIZE };
+  // 两个矩形是否相交（同一坐标系，{left, right, top, bottom}）。边缘相接不算相交。
+  function rectsOverlap(a, b) {
+    return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  }
+
+  return { planFrames, frameSlice, assignParts, cropRect, fitScale, pickScrollTarget, containerVisibility, selectionStartY, stickyVisible, rectsOverlap, MAX_PART_SIZE };
 });

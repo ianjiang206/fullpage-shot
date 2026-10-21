@@ -153,3 +153,12 @@ test('stickyVisible: 计入 cssTop 偏移', () => {
   assert.equal(S.stickyVisible(250, 260, 10), true);
   assert.equal(S.stickyVisible(251, 260, 10), false);
 });
+
+// --- rectsOverlap ---
+test('rectsOverlap: 相交判定', () => {
+  const sel = { left: 10, right: 50, top: 20, bottom: 80 };
+  assert.equal(S.rectsOverlap({ left: 0, right: 100, top: 0, bottom: 40 }, sel), true);   // 选区覆盖顶部条
+  assert.equal(S.rectsOverlap({ left: 0, right: 100, top: 0, bottom: 20 }, sel), false);  // 选区顶边恰好相接，不算相交
+  assert.equal(S.rectsOverlap({ left: 0, right: 100, top: 0, bottom: 10 }, sel), false);  // 选区在其下方
+  assert.equal(S.rectsOverlap({ left: 60, right: 100, top: 30, bottom: 60 }, sel), false); // 横向不相交
+});
