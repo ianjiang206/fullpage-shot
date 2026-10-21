@@ -1,26 +1,50 @@
 'use strict';
-// Task 3 版本：选区确认后先显示选区参数，Task 4 接入真正的截取。
+// Task 4 版本：截取结果直接自动下载（验证拼接正确性），Task 5 换成预览浮层。
 (function () {
   if (window.__fpsMainLoaded) return;
   window.__fpsMainLoaded = true;
 
-  function toast(text, ms) {
-    const el = document.createElement('div');
-    el.textContent = text;
-    el.style.cssText =
-      'position:fixed;top:12px;right:12px;z-index:2147483647;background:#1a73e8;' +
-      'color:#fff;padding:8px 12px;border-radius:6px;font:13px sans-serif;';
-    document.documentElement.appendChild(el);
-    setTimeout(() => el.remove(), ms || 3000);
+  let capturing = false;
+
+  function twoFrames() {
+    return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   }
 
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && capturing) window.FpsCapture.cancel();
+  }, true);
+
   function start() {
-    window.FpsSelect.start({
-      onConfirm: (sel) => {
-        toast(`选区: x=${Math.round(sel.x)}, 宽=${Math.round(sel.w)}（Task 4 接入截取）`);
-      },
-      onCancel: () => {},
-    });
+    if (capturing) return;
+    window.FpsSelect.start({ onConfirm, onCancel: () => {} });
+  }
+
+  async function onConfirm(sel) {
+    capturing = true;
+    await twoFrames(); // 等选区遮罩真正离开合成帧，避免出现在首帧里
+    try {
+      const result = await window.FpsCapture.capture(sel, (i, n) => {
+        chrome.runtime.sendMessage({ type: 'fps:progress', text: `${i}/${n}` });
+      });
+      result.parts.forEach((p, i) => {
+        setTimeout(() => {
+          p.canvas.toBlob((blob) => {
+            if (!blob) return;
+            const a = document.createElement('a');
+            a.download = `fps-debug-part${i + 1}.png`;
+            a.href = URL.createObjectURL(blob);
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+          }, 'image/png');
+        }, i * 400);
+      });
+    } catch (e) {
+      if (e && e.message !== 'aborted') {
+        alert('截取失败：' + (e && e.message ? e.message : e));
+      }
+    } finally {
+      capturing = false;
+    }
   }
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {

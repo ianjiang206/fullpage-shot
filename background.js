@@ -1,7 +1,7 @@
 'use strict';
 
 // 后续任务会往这里追加 content/stitch.js、content/select.js 等
-const CONTENT_FILES = ['content/stitch.js', 'content/select.js', 'content/main.js'];
+const CONTENT_FILES = ['content/stitch.js', 'content/select.js', 'content/capture.js', 'content/main.js'];
 const DEFAULT_TITLE = '截取页面';
 
 function ping(tabId) {
