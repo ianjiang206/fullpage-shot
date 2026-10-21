@@ -112,3 +112,19 @@ test('pickScrollTarget: 余量内不算可滚动；全不可滚动返回 null', 
   assert.equal(S.pickScrollTarget([{ el: {}, scrollHeight: 405, clientHeight: 400 }]), null);
   assert.equal(S.pickScrollTarget([]), null);
 });
+
+// --- containerVisibility ---
+test('containerVisibility: 完整可见 → ok', () => {
+  assert.equal(S.containerVisibility(100, 360, 900), 'ok');
+  assert.equal(S.containerVisibility(0, 900, 900), 'ok'); // 恰好占满视口（全屏面板）
+});
+
+test('containerVisibility: 被裁但高度可容纳 → align', () => {
+  assert.equal(S.containerVisibility(-50, 360, 900), 'align'); // 顶部在视口上方
+  assert.equal(S.containerVisibility(800, 360, 900), 'align'); // 底部在视口下方
+});
+
+test('containerVisibility: 高于视口 → unsupported', () => {
+  assert.equal(S.containerVisibility(100, 1200, 900), 'unsupported');
+  assert.equal(S.containerVisibility(-100, 1200, 900), 'unsupported');
+});

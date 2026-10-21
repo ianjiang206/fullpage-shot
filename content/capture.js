@@ -89,14 +89,9 @@ window.FpsCapture = (() => {
     const target = container || scrollingEl;
     const getTop = () => target.scrollTop;
     const setTop = (v) => { target.scrollTop = v; };
-
-    // 容器在视口中的可见带高（容器可能部分在视口外）
-    const containerTop = isWindow ? 0 : Math.max(0, target.getBoundingClientRect().top);
-    const viewportHeight = isWindow
-      ? window.innerHeight
-      : Math.min(target.clientHeight, window.innerHeight - containerTop);
-    const contentHeight = target.scrollHeight;
     const initTop = getTop();
+    const initWinX = window.scrollX;
+    const initWinY = window.scrollY;
 
     // 关闭平滑滚动，避免 scrollTo 动画干扰对齐；结束后恢复
     const scrollBehaviorSaved = [];
@@ -106,7 +101,6 @@ window.FpsCapture = (() => {
     }
 
     const fixed = collectFixedElements();
-    const frames = window.FpsStitch.planFrames(contentHeight, viewportHeight);
 
     let dpr = null;
     let parts = null;
@@ -114,6 +108,25 @@ window.FpsCapture = (() => {
     let colRect = null;
 
     try {
+      // 内部滚动容器：先让它在视口中完整可见（必要时滚动 window 顶对齐），
+      // 否则帧规划与截帧对不上。容器内容盒 = border box + clientTop（边框宽）。
+      let containerTop = 0;
+      if (!isWindow) {
+        const contentTop = () => target.getBoundingClientRect().top + target.clientTop;
+        let visibility = window.FpsStitch.containerVisibility(contentTop(), target.clientHeight, window.innerHeight);
+        if (visibility === 'align') {
+          window.scrollBy(0, contentTop());
+          visibility = window.FpsStitch.containerVisibility(contentTop(), target.clientHeight, window.innerHeight);
+        }
+        if (visibility !== 'ok') {
+          throw new Error('内部滚动容器高于视口，暂不支持完整截取；请改用「截取整页」');
+        }
+        containerTop = Math.max(0, contentTop());
+      }
+      const viewportHeight = isWindow ? window.innerHeight : target.clientHeight;
+      const contentHeight = target.scrollHeight;
+      const frames = window.FpsStitch.planFrames(contentHeight, viewportHeight);
+
       for (let i = 0; i < frames.length; i++) {
         if (aborted) throw new Error('aborted');
         if (onProgress) onProgress(i + 1, frames.length);
@@ -162,6 +175,7 @@ window.FpsCapture = (() => {
       };
     } finally {
       setTop(initTop);
+      window.scrollTo(initWinX, initWinY);
       for (const f of fixed) f.el.style.visibility = f.prev;
       for (const [el, prev] of scrollBehaviorSaved) el.style.scrollBehavior = prev;
       chrome.runtime.sendMessage({ type: 'fps:done' });

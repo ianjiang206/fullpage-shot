@@ -77,5 +77,14 @@
     return null;
   }
 
-  return { planFrames, frameSlice, assignParts, cropRect, fitScale, pickScrollTarget, MAX_PART_SIZE };
+  // 内部滚动容器内容盒在视口中的可见性处置：
+  //   'ok'          已完整可见（[top, top+height] ⊆ [0, innerHeight]）
+  //   'align'       可通过 window 顶对齐滚动变为完整可见（高度 ≤ 视口）
+  //   'unsupported' 高于视口，无法完整对齐
+  function containerVisibility(contentTop, contentHeight, innerHeight) {
+    if (contentTop >= 0 && contentTop + contentHeight <= innerHeight) return 'ok';
+    return contentHeight <= innerHeight ? 'align' : 'unsupported';
+  }
+
+  return { planFrames, frameSlice, assignParts, cropRect, fitScale, pickScrollTarget, containerVisibility, MAX_PART_SIZE };
 });
