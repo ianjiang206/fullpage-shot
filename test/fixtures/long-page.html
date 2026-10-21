@@ -66,6 +66,19 @@
       p.textContent = `容器内第 ${i} 行`;
       inner.appendChild(p);
     }
+    // 道具：截取开始（首次滚动）800ms 后弹出的延时 cookie 弹窗——不应出现在截图中
+    let popupShown = false;
+    window.addEventListener('scroll', () => {
+      if (popupShown) return;
+      popupShown = true;
+      setTimeout(() => {
+        const b = document.createElement('div');
+        b.style.cssText = 'position:fixed;right:16px;bottom:16px;width:280px;padding:16px;' +
+          'background:#c0392b;color:#fff;border-radius:10px;z-index:9999;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,.4);';
+        b.textContent = '延时弹窗（截取中途出现，不应进入截图）';
+        document.body.appendChild(b);
+      }, 800);
+    }, { once: false });
   </script>
 </body>
 </html>

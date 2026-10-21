@@ -78,6 +78,18 @@ window.FpsCapture = (() => {
     return createImageBitmap(blob);
   }
 
+  // 预热：正式截帧前先把目标容器完整滚一遍（约每屏停 150ms），触发懒加载
+  // 图片/iframe 与一次性滚动 reveal 动画，然后滚回原位——截帧时内容已就绪
+  async function warmUp(setTop, maxScroll, step) {
+    for (let y = 0; y < maxScroll; y += step) {
+      if (aborted) return;
+      setTop(y);
+      await sleep(150);
+    }
+    setTop(maxScroll);
+    await sleep(300);
+  }
+
   // sel: {x, y, w, h} 视口 CSS px（仅用 x/w 作裁剪列；纵向 = 容器全部内容高度）
   // onProgress(frameIndex, totalFrames)，从 1 开始
   async function capture(sel, onProgress) {
@@ -101,6 +113,7 @@ window.FpsCapture = (() => {
     }
 
     const fixed = collectFixedElements();
+    const fixedSet = new Set(fixed.map((f) => f.el));
     // 记录框选时刻各元素是否与选区相交（视口坐标，此刻页面尚未滚动）。
     // fixed/吸顶元素在任意滚动位置的视觉位置不变，故该判定对截取全程有效。
     const selBounds = { left: sel.x, right: sel.x + sel.w, top: sel.y, bottom: sel.y + sel.h };
@@ -116,6 +129,16 @@ window.FpsCapture = (() => {
     let colRect = null;
 
     try {
+      // 预热滚动（在任何测量之前；滚动经过会触发懒加载与 reveal 动画，可能撑大内容高度）
+      const warmMax = Math.max(0, target.scrollHeight - (isWindow ? window.innerHeight : target.clientHeight));
+      if (warmMax > 0) {
+        chrome.runtime.sendMessage({ type: 'fps:progress', text: '预热' });
+        await warmUp(setTop, warmMax, isWindow ? window.innerHeight : target.clientHeight);
+        if (aborted) throw new Error('aborted');
+        setTop(initTop);
+        await waitSettle(getTop);
+      }
+
       // 内部滚动容器：先让它在视口中完整可见（必要时滚动 window 顶对齐），
       // 否则帧规划与截帧对不上。容器内容盒 = border box + clientTop（边框宽）。
       let containerTop = 0;
@@ -171,6 +194,15 @@ window.FpsCapture = (() => {
 
         setTop(frames[i] + startY);
         await waitSettle(getTop);
+        // 弹窗清扫：截取中途新出现的 fixed/sticky（如延时 cookie 弹窗）不属于框选时
+        // 的场景——并入管理列表，inSelection=false 且 naturalTop=null，下方规则将它们隐藏。
+        // （每帧全量重扫有开销，但帧预算 ≥520ms，足够容纳）
+        for (const f of collectFixedElements()) {
+          if (!fixedSet.has(f.el)) {
+            fixedSet.add(f.el);
+            fixed.push({ ...f, inSelection: false, naturalTop: null });
+          }
+        }
         // 每帧截屏前设置遮挡元素可见性。语义（所见即所得）：
         // 1) sticky 未吸顶时是流内内容，在自然位置帧可见一次；
         // 2) fixed / 已吸顶的 sticky 仅在框选时刻与选区相交时，于首帧按原样出现一次；
