@@ -24,7 +24,10 @@ window.FpsCapture = (() => {
     return window.FpsStitch.pickScrollTarget(chain);
   }
 
-  // 收集可见的 fixed/sticky 元素及其原 inline visibility（用于恢复）
+  // 收集可见的 fixed/sticky 元素及其原 inline visibility（用于恢复）。
+  // 注意零面积元素不能一刀切跳过：GitHub blob 工具栏是 h:0 的 sticky 包装 +
+  // absolute 子元素渲染可见内容，漏管会导致它吸附后每帧都出现在截图里。
+  // 零面积时用可见后代的包围盒作为其视觉矩形（rect），无可见后代的才跳过。
   function collectFixedElements() {
     const out = [];
     for (const el of document.querySelectorAll('*')) {
@@ -33,10 +36,27 @@ window.FpsCapture = (() => {
       if (cs.position !== 'fixed' && cs.position !== 'sticky') continue;
       if (cs.display === 'none' || cs.visibility === 'hidden') continue;
       const r = el.getBoundingClientRect();
-      if (r.width === 0 || r.height === 0) continue;
-      out.push({ el, prev: el.style.visibility, sticky: cs.position === 'sticky', cssTop: parseFloat(cs.top) || 0, height: r.height });
+      const rect = window.FpsStitch.visualRect(
+        { left: r.left, right: r.right, top: r.top, bottom: r.bottom },
+        (r.width === 0 || r.height === 0) ? visibleChildRects(el) : null);
+      if (!rect) continue;
+      out.push({ el, prev: el.style.visibility, sticky: cs.position === 'sticky', cssTop: parseFloat(cs.top) || 0, height: r.height, rect });
     }
     return out;
+  }
+
+  // 零面积元素的可见后代矩形（上限 50 个，防深层 DOM 退化）
+  function visibleChildRects(el) {
+    const rects = [];
+    for (const d of el.querySelectorAll('*')) {
+      const dcs = getComputedStyle(d);
+      if (dcs.display === 'none' || dcs.visibility === 'hidden') continue;
+      const dr = d.getBoundingClientRect();
+      if (dr.width === 0 || dr.height === 0) continue;
+      rects.push({ left: dr.left, right: dr.right, top: dr.top, bottom: dr.bottom });
+      if (rects.length >= 50) break;
+    }
+    return rects;
   }
 
   // 轮询 scrollTop 直到连续 100ms 不再变化（或超时兜底）
@@ -116,11 +136,11 @@ window.FpsCapture = (() => {
     const fixedSet = new Set(fixed.map((f) => f.el));
     // 记录框选时刻各元素是否与选区相交（视口坐标，此刻页面尚未滚动）。
     // fixed/吸顶元素在任意滚动位置的视觉位置不变，故该判定对截取全程有效。
+    // 用收集时的视觉矩形：零面积包装元素（h:0 sticky + absolute 后代）的可见区域
+    // 在后代身上，用元素自身 rect 会把"框选覆盖了工具栏"误判为未覆盖。
     const selBounds = { left: sel.x, right: sel.x + sel.w, top: sel.y, bottom: sel.y + sel.h };
     for (const f of fixed) {
-      const r = f.el.getBoundingClientRect();
-      f.inSelection = window.FpsStitch.rectsOverlap(
-        { left: r.left, right: r.right, top: r.top, bottom: r.bottom }, selBounds);
+      f.inSelection = window.FpsStitch.rectsOverlap(f.rect, selBounds);
     }
 
     let dpr = null;

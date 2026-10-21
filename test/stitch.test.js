@@ -170,3 +170,29 @@ test('stickyIsContent: 超过半视口高的 sticky 是内容，永不隐藏', (
   assert.equal(S.stickyIsContent(450, 900), false);  // 恰好一半仍算 chrome
   assert.equal(S.stickyIsContent(40, 900), false);   // 导航栏
 });
+
+// --- visualRect ---
+// GitHub blob 工具栏模式：h:0 的 sticky 包装 + absolute 子元素渲染可见内容。
+// 这类元素自身零面积，收集与选区相交判定都必须用"视觉矩形"，否则漏管（每帧吸附重复）
+// 或误判 inSelection（框选覆盖却被当未覆盖）。
+test('visualRect: 自身有面积时用自身矩形', () => {
+  const own = { left: 0, right: 100, top: 0, bottom: 50 };
+  assert.deepEqual(S.visualRect(own, []), own);
+});
+test('visualRect: 零面积时取可见后代的包围盒', () => {
+  const own = { left: 100, right: 1172, top: 0, bottom: 0 }; // h:0 sticky 包装
+  const child = { left: 100, right: 1172, top: 0, bottom: 90 }; // absolute 子元素
+  assert.deepEqual(S.visualRect(own, [child]), child);
+});
+test('visualRect: 多个后代取并集', () => {
+  const own = { left: 0, right: 0, top: 0, bottom: 0 };
+  const kids = [
+    { left: 10, right: 60, top: 0, bottom: 30 },
+    { left: 50, right: 120, top: 20, bottom: 80 },
+  ];
+  assert.deepEqual(S.visualRect(own, kids), { left: 10, right: 120, top: 0, bottom: 80 });
+});
+test('visualRect: 零面积且无可见后代 → null（不收集）', () => {
+  assert.equal(S.visualRect({ left: 5, right: 5, top: 5, bottom: 5 }, []), null);
+  assert.equal(S.visualRect({ left: 5, right: 5, top: 5, bottom: 5 }, null), null);
+});

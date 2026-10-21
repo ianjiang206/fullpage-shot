@@ -8,6 +8,9 @@
   .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 240px; background: #2c3e50; color: #fff; padding: 16px; overflow: hidden; }
   .sticky-header { position: sticky; top: 0; background: #e74c3c; color: #fff; padding: 12px; z-index: 10; }
   .sticky-section { position: sticky; top: 0; background: #27ae60; color: #fff; padding: 10px; z-index: 5; }
+  /* GitHub blob 工具栏模式：h:0 sticky 包装 + absolute 子元素渲染可见内容 */
+  .sticky-shell { position: sticky; top: 0; height: 0; z-index: 8; }
+  .sticky-shell > .shell-bar { position: absolute; top: 0; left: 0; right: 0; height: 44px; background: #e67e22; color: #fff; display: flex; align-items: center; padding: 0 16px; box-sizing: border-box; }
   main { margin-left: 240px; }
   .content { padding: 24px; max-width: 640px; }
   .content p { font-size: 15px; line-height: 1.8; }
@@ -43,6 +46,16 @@
         sh.className = 'sticky-section';
         sh.textContent = '中部章节标题（sticky，应在其自然位置只出现一次）';
         content.appendChild(sh);
+      }
+      if (i === 45) {
+        // 回归道具：h:0 sticky 包装 + absolute 工具栏，应只在自然位置出现一次
+        const shell = document.createElement('div');
+        shell.className = 'sticky-shell';
+        const bar = document.createElement('div');
+        bar.className = 'shell-bar';
+        bar.textContent = '零高度 sticky 包装的工具栏（结果中只应出现一次）';
+        shell.appendChild(bar);
+        content.appendChild(shell);
       }
       const p = document.createElement('p');
       p.textContent = `第 ${i} 段：滚动拼接测试内容，用于检查接缝处文字是否连续。`.repeat(2);

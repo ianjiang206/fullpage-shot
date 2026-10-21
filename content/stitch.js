@@ -111,5 +111,22 @@
     return elHeight > viewportHeight / 2;
   }
 
-  return { planFrames, frameSlice, assignParts, cropRect, fitScale, pickScrollTarget, containerVisibility, selectionStartY, stickyVisible, rectsOverlap, stickyIsContent, MAX_PART_SIZE };
+  // 元素的视觉矩形：自身有面积时用自身；零面积（如 h:0 的 sticky 包装，GitHub blob
+  // 工具栏模式——可见内容在 absolute 后代里）时取可见后代矩形的包围盒；
+  // 零面积且无可见后代返回 null（调用方不应收集/管理它）。
+  // 矩形为 {left, right, top, bottom}，childRects 为同类数组或 null。
+  function visualRect(own, childRects) {
+    if (own.right > own.left && own.bottom > own.top) return own;
+    if (!childRects || childRects.length === 0) return null;
+    let left = Infinity, right = -Infinity, top = Infinity, bottom = -Infinity;
+    for (const c of childRects) {
+      if (c.left < left) left = c.left;
+      if (c.right > right) right = c.right;
+      if (c.top < top) top = c.top;
+      if (c.bottom > bottom) bottom = c.bottom;
+    }
+    return right > left && bottom > top ? { left, right, top, bottom } : null;
+  }
+
+  return { planFrames, frameSlice, assignParts, cropRect, fitScale, pickScrollTarget, containerVisibility, selectionStartY, stickyVisible, rectsOverlap, stickyIsContent, visualRect, MAX_PART_SIZE };
 });
