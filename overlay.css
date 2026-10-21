@@ -1,0 +1,56 @@
+:host { all: initial; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* --- 选区遮罩 --- */
+.fps-overlay {
+  position: fixed; inset: 0; z-index: 2147483647;
+  cursor: crosshair; user-select: none;
+}
+.fps-toolbar {
+  position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+  z-index: 2147483647; display: flex; gap: 8px; align-items: center;
+  background: #fff; color: #222; border-radius: 8px; padding: 8px 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.3);
+  font: 13px/1.4 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.fps-btn {
+  border: 1px solid #d0d0d0; background: #fff; color: #1a73e8;
+  border-radius: 6px; padding: 5px 12px; cursor: pointer;
+  font: 13px -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.fps-btn:hover { background: #f1f6ff; }
+.fps-btn:disabled { opacity: .5; cursor: default; }
+.fps-btn.fps-primary { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+.fps-btn.fps-primary:hover { background: #1765cc; }
+.fps-rect {
+  position: absolute; border: 2px solid #1a73e8;
+  /* 用巨大外阴影调暗选区之外的一切，选区本身保持原样 */
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.3);
+}
+.fps-label {
+  position: absolute; right: 0; bottom: -28px;
+  background: #1a73e8; color: #fff; font: 12px/1.5 sans-serif;
+  padding: 2px 8px; border-radius: 4px; white-space: nowrap;
+}
+.fps-confirm { position: absolute; right: 8px; bottom: 8px; }
+
+/* --- 结果预览浮层 --- */
+.fps-card {
+  position: fixed; inset: 0; z-index: 2147483647;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.45);
+  font: 13px/1.5 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.fps-panel {
+  background: #fff; color: #222; border-radius: 12px; padding: 16px;
+  max-width: min(560px, 90vw); box-shadow: 0 8px 40px rgba(0,0,0,.4);
+}
+.fps-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+.fps-thumb-wrap {
+  max-height: 50vh; overflow: auto;
+  border: 1px solid #e0e0e0; border-radius: 8px; background: #f7f7f7;
+}
+.fps-thumb-wrap canvas { display: block; max-width: 100%; }
+.fps-meta { color: #555; margin: 8px 0; }
+.fps-note { color: #b06000; min-height: 1.2em; margin-bottom: 8px; }
+.fps-actions { display: flex; gap: 8px; justify-content: flex-end; }
