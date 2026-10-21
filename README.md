@@ -1,0 +1,36 @@
+# FullPage Shot
+
+框选区域，滚动拼接截取整个网页内容的 Chrome 扩展（MV3，无外部依赖）。
+
+## 安装
+
+1. `chrome://extensions` → 打开「开发者模式」
+2. 「加载已解压的扩展程序」→ 选择本目录
+
+## 使用
+
+1. 在目标页面点击工具栏图标
+2. 拖拽框选要保留的内容列（sidebar 等无关区域留在框外即可），或点「截取整页」
+3. Enter /「开始截取」→ 自动滚动拼接（期间按 Esc 取消）
+4. 预览浮层中「下载 PNG」或「复制到剪贴板」
+
+## 行为说明
+
+- 选区的横向范围固定为裁剪列，纵向覆盖滚动容器全部内容高度
+- 自动探测内部滚动容器（选区中心最近的 `scrollHeight > clientHeight` 祖先）
+- fixed/sticky 元素只出现在结果顶部一次
+- 拼接高度超过 16384px（× dpr）时自动拆分为多张 PNG；剪贴板复制则等比缩放为单图
+- 进度显示在扩展图标 badge 上（i/n）
+
+## 已知限制
+
+- `chrome://`、Chrome Web Store、内置 PDF 查看器等页面无法注入（图标显示 "!"）
+- 懒加载内容依赖滚动经过 + 300ms 等待唤醒，极端懒加载策略可能漏图
+- 截取期间页面若持续变化（无限滚动增长），以截取开始时的高度为准
+- iframe 内部内容无法参与滚动容器探测（截图本身会包含 iframe 画面）
+
+## 开发
+
+- `node --test test/`：stitch.js 纯函数单测
+- `python3 -m http.server 8000` 后访问 `http://localhost:8000/test/fixtures/long-page.html`（`#tall` 为超长模式）做手工测试
+- `node scripts/make-icons.js`：重新生成图标
