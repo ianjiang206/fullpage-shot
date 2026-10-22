@@ -19,8 +19,8 @@ try {
     };
     const geometry = await import('/content/geometry.js');
     const capture = await import('/content/capture.js');
-    const select = await import('/content/select.js');
-    const preview = await import('/content/preview.js');
+    const { SelectionOverlay } = await import('/content/select.js');
+    const { ResultOverlay, ErrorOverlay } = await import('/content/preview.js');
     await import('/content/main.js'); // registers its listener against the stub
     const fixed = capture.collectFixedElements();
     const shell = fixed.find((record) => record.element.className === 'sticky-shell');
@@ -28,7 +28,7 @@ try {
       frames: geometry.planFrames(3200, 1000),
       fixedCount: fixed.length,
       shellHasArea: !!shell && shell.visualRect.bottom > shell.visualRect.top,
-      exports: [typeof select.start, typeof capture.capture, typeof preview.show, typeof preview.showError],
+      exports: [typeof SelectionOverlay, typeof capture.capture, typeof ResultOverlay, typeof ErrorOverlay],
       globals: ['FpsStitch', 'FpsSelect', 'FpsCapture', 'FpsPreview'].filter((n) => window[n] !== undefined),
     };
   })()`);

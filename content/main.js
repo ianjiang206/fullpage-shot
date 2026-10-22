@@ -1,8 +1,8 @@
 // State machine: idle → selecting → capturing → preview → (retry back to selecting / close back to idle)
 import { MSG } from '../shared/protocol.js';
-import * as select from './select.js';
+import { SelectionOverlay } from './select.js';
 import * as capture from './capture.js';
-import * as preview from './preview.js';
+import { ResultOverlay, ErrorOverlay } from './preview.js';
 
 let phase = 'idle'; // idle | selecting | capturing | preview
 let ui = null;      // current overlay's {close()}
@@ -22,7 +22,7 @@ function start() {
 
 function beginSelect() {
   phase = 'selecting';
-  ui = select.start({
+  ui = new SelectionOverlay({
     onConfirm,
     onCancel: () => { phase = 'idle'; ui = null; },
   });
@@ -37,7 +37,7 @@ async function onConfirm(sel) {
       chrome.runtime.sendMessage({ type: MSG.PROGRESS, text: `${i}/${n}` });
     });
     phase = 'preview';
-    ui = preview.show({
+    ui = new ResultOverlay({
       ...result,
       onRetry: () => { beginSelect(); },
       onClose: () => { phase = 'idle'; ui = null; },
@@ -48,7 +48,7 @@ async function onConfirm(sel) {
       return;
     }
     phase = 'preview';
-    ui = preview.showError(
+    ui = new ErrorOverlay(
       '截取失败：' + (e && e.message ? e.message : e),
       () => { phase = 'idle'; ui = null; },
     );

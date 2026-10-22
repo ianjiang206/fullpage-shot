@@ -124,13 +124,13 @@ import { MSG } from '../shared/protocol.js';
     await sleep(300);
   }
 
-  // sel: {x, y, w, h} in viewport CSS px (only x/w form the crop column; the vertical
-  // range is the container's full content height)
+  // sel: {x, y, width, height, fromTop?} in viewport CSS px (only x/width form
+  // the crop column; the vertical range is the container's full content height)
   // onProgress(frameIndex, totalFrames), 1-based
   async function capture(sel, onProgress) {
     aborted = false;
 
-    const container = findScrollContainer(sel.x + sel.w / 2, sel.y + sel.h / 2);
+    const container = findScrollContainer(sel.x + sel.width / 2, sel.y + sel.height / 2);
     const isWindow = !container;
     const scrollingEl = document.scrollingElement || document.documentElement;
     const target = container || scrollingEl;
@@ -156,7 +156,7 @@ import { MSG } from '../shared/protocol.js';
     // wrappers (h:0 sticky + absolute descendants) the visible region lives on the
     // descendants, and the element's own rect would misjudge "selection covers the
     // toolbar" as uncovered.
-    const selectionBounds = { left: sel.x, right: sel.x + sel.w, top: sel.y, bottom: sel.y + sel.h };
+    const selectionBounds = { left: sel.x, right: sel.x + sel.width, top: sel.y, bottom: sel.y + sel.height };
     for (const record of fixed) {
       record.coveredBySelection = geometry.rectsOverlap(record.visualRect, selectionBounds);
     }
@@ -267,7 +267,7 @@ import { MSG } from '../shared/protocol.js';
           // including page zoom)
           dpr = img.width / window.innerWidth;
           parts = geometry.splitIntoParts(frames, viewportHeight, capContent, dpr);
-          colRect = geometry.cropColumn(sel.x, sel.w, window.innerWidth, dpr);
+          colRect = geometry.cropColumn(sel.x, sel.width, window.innerWidth, dpr);
           if (colRect.width <= 0) throw new Error('裁剪列宽度为 0，请重新框选');
           canvases = parts.map((p) => {
             const c = document.createElement('canvas');
