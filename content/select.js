@@ -1,6 +1,7 @@
 // Selection overlay: drag a rectangle to select; Enter / the action button
 // confirms; Esc cancels; pressing anywhere on the mask redraws. With no
-// selection the action button is 「截取整页」 (full width, from the top).
+// selection the action button performs a full-page capture (full width, from
+// the top).
 import { Overlay, h } from './overlay.js';
 
 const DRAG_THRESHOLD = 4; // px; smaller than this counts as a click (redraw)
@@ -21,10 +22,10 @@ export class SelectionOverlay extends Overlay {
     super({ onClose: onCancel });
     this.#onConfirm = onConfirm;
 
-    this.hint = h('span', { text: '拖拽框选要截取的区域' });
+    this.hint = h('span', { text: chrome.i18n.getMessage('selectHintEmpty') });
     this.actionButton = h('button', { type: 'button', class: 'fps-btn fps-primary' });
     const cancelButton = h('button', {
-      type: 'button', class: 'fps-btn', html: '取消 <kbd>Esc</kbd>',
+      type: 'button', class: 'fps-btn', html: chrome.i18n.getMessage('cancel') + ' <kbd>Esc</kbd>',
       onClick: () => this.close(),
     });
     this.label = h('div', { class: 'fps-label' });
@@ -90,10 +91,14 @@ export class SelectionOverlay extends Overlay {
   }
 
   #render() {
-    // Contextual toolbar: with a selection the action button is 「截取」,
-    // without one it is 「截取整页」
-    this.actionButton.innerHTML = this.#rect ? '截取 <kbd>Enter</kbd>' : '截取整页';
-    this.hint.textContent = this.#rect ? '拖拽任意处可重新框选' : '拖拽框选要截取的区域';
+    // Contextual toolbar: with a selection the action button captures the
+    // selected area; without one it captures the full page.
+    this.actionButton.innerHTML = this.#rect
+      ? chrome.i18n.getMessage('capture') + ' <kbd>Enter</kbd>'
+      : chrome.i18n.getMessage('captureFullPage');
+    this.hint.textContent = this.#rect
+      ? chrome.i18n.getMessage('selectHintReselect')
+      : chrome.i18n.getMessage('selectHintEmpty');
     if (!this.#rect) {
       this.rectEl.style.display = 'none';
       return;
@@ -105,7 +110,7 @@ export class SelectionOverlay extends Overlay {
     this.rectEl.style.height = this.#rect.height + 'px';
     // Vertically we capture from the selection's top edge to the content end
     // (spec §5.1); the label says so honestly
-    this.label.textContent = `宽 ${Math.round(this.#rect.width)} px · 从此处截到页尾`;
+    this.label.textContent = chrome.i18n.getMessage('selectionSize', String(Math.round(this.#rect.width)));
   }
 }
 

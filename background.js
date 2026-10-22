@@ -1,6 +1,6 @@
 import { MSG } from './shared/protocol.js';
 
-const DEFAULT_TITLE = '截取页面';
+const DEFAULT_TITLE = chrome.i18n.getMessage('actionTitle');
 
 // MessageRouter maps message types to handlers, centralizing the no-tab guard
 // and Chrome's async-sendResponse channel rules: a handler returning a
@@ -40,7 +40,7 @@ function ping(tabId) {
 async function markUnsupported(tabId) {
   await chrome.action.setBadgeBackgroundColor({ tabId, color: '#d93025' });
   await chrome.action.setBadgeText({ tabId, text: '!' });
-  await chrome.action.setTitle({ tabId, title: '此页面不支持截图' });
+  await chrome.action.setTitle({ tabId, title: chrome.i18n.getMessage('unsupportedTitle') });
 }
 
 chrome.action.onClicked.addListener(async (tab) => {

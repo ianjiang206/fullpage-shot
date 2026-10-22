@@ -2,14 +2,14 @@
 // events: drag-select + Enter confirm, full-page button confirm, Esc cancel,
 // result-overlay rendering + Esc close, error overlay.
 import assert from 'node:assert/strict';
-import { startServer, launchChrome, CdpPage } from './cdp.mjs';
+import { startServer, launchChrome, CdpPage, i18nStubSource } from './cdp.mjs';
 
 const server = await startServer();
 const chrome = await launchChrome();
 try {
   const page = await CdpPage.open('http://127.0.0.1:8931/test/fixtures/long-page.html');
   const report = await page.evaluate(`(async () => {
-    window.chrome = { runtime: { getURL: (p) => '/' + p, onMessage: { addListener: () => {} } } };
+    window.chrome = { i18n: ${i18nStubSource}, runtime: { getURL: (p) => '/' + p, onMessage: { addListener: () => {} } } };
     const { SelectionOverlay } = await import('/content/select.js');
     const { ResultOverlay, ErrorOverlay } = await import('/content/preview.js');
 
@@ -60,7 +60,7 @@ try {
 
     // 5. error overlay shows the message and its close button removes it
     let errorClosed = false;
-    const error = new ErrorOverlay('截取失败：boom', () => { errorClosed = true; });
+    const error = new ErrorOverlay(chrome.i18n.getMessage('captureFailed', 'boom'), () => { errorClosed = true; });
     const errorText = error.host.shadowRoot.querySelector('.fps-meta').textContent;
     error.host.shadowRoot.querySelector('.fps-btn').click();
 

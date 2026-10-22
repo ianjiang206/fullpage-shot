@@ -1,0 +1,135 @@
+{
+  "appDescription": {
+    "message": "Select an area, then scroll and stitch to capture the entire page.",
+    "description": "Extension description shown by Chrome and in the Web Store."
+  },
+  "actionTitle": {
+    "message": "Capture page",
+    "description": "Toolbar action tooltip."
+  },
+  "unsupportedTitle": {
+    "message": "Screenshots are not supported on this page",
+    "description": "Toolbar action tooltip on pages where screenshots are not supported."
+  },
+  "selectHintEmpty": {
+    "message": "Drag to select the area to capture",
+    "description": "Hint shown before a selection is made."
+  },
+  "selectHintReselect": {
+    "message": "Drag anywhere to reselect",
+    "description": "Hint shown when a selection already exists."
+  },
+  "cancel": {
+    "message": "Cancel",
+    "description": "Cancel button label."
+  },
+  "capture": {
+    "message": "Capture",
+    "description": "Primary button label for capturing the selected area."
+  },
+  "captureFullPage": {
+    "message": "Capture full page",
+    "description": "Primary button label for capturing the whole page."
+  },
+  "selectionSize": {
+    "message": "$WIDTH$ px wide · capture from here to the end of the page",
+    "description": "Selection size label; $WIDTH$ is the selection width in CSS pixels.",
+    "placeholders": {
+      "width": {
+        "content": "$1",
+        "example": "1280"
+      }
+    }
+  },
+  "resultTitle": {
+    "message": "Capture complete",
+    "description": "Title of the capture result overlay."
+  },
+  "resultMetaSplit": {
+    "message": "split into $COUNT$ parts (auto-split for length)",
+    "description": "Meta note when the capture is split; $COUNT$ is the number of parts.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "downloadOne": {
+    "message": "Download PNG",
+    "description": "Download button label for a single PNG."
+  },
+  "downloadMany": {
+    "message": "Download $COUNT$ PNGs",
+    "description": "Download button label for multiple PNGs; $COUNT$ is the number of parts.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "copy": {
+    "message": "Copy to clipboard",
+    "description": "Copy-to-clipboard button label."
+  },
+  "copied": {
+    "message": "Copied to clipboard",
+    "description": "Note shown after a successful copy."
+  },
+  "copiedScaled": {
+    "message": "Copied (scaled down to fit the size limit)",
+    "description": "Note shown after copying a capture scaled down to fit the size limit."
+  },
+  "copyFailed": {
+    "message": "Copy failed ($REASON$) — please use Download instead",
+    "description": "Copy failure note; $REASON$ is the underlying error.",
+    "placeholders": {
+      "reason": {
+        "content": "$1",
+        "example": "denied"
+      }
+    }
+  },
+  "reselect": {
+    "message": "Reselect",
+    "description": "Button label that returns to selection mode."
+  },
+  "close": {
+    "message": "Close",
+    "description": "Close button label."
+  },
+  "errorTitle": {
+    "message": "Something went wrong",
+    "description": "Title of the error overlay."
+  },
+  "toBlobFailed": {
+    "message": "toBlob failed",
+    "description": "Error shown when canvas.toBlob produces no image."
+  },
+  "statusWarmup": {
+    "message": "Warming up",
+    "description": "Badge status text during the warm-up scroll."
+  },
+  "errorSelectionBeyondEnd": {
+    "message": "The selection starts beyond the end of the content — please reselect",
+    "description": "Error shown when the selection starts past the content end."
+  },
+  "errorZeroCropWidth": {
+    "message": "The crop area is 0 px wide — please reselect",
+    "description": "Error shown when the selected crop area is zero pixels wide."
+  },
+  "captureFailed": {
+    "message": "Capture failed: $REASON$",
+    "description": "Capture failure message; $REASON$ is the underlying error.",
+    "placeholders": {
+      "reason": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorTallInnerScroller": {
+    "message": "Inner scroll containers taller than the viewport are not supported yet — use Capture full page instead",
+    "description": "Error shown when an inner scroll container is taller than the viewport."
+  }
+}

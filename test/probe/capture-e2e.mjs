@@ -3,7 +3,7 @@
 // Checks the result shape, the progress sequence (warm-up first), and scene
 // restoration — including the mid-warm-up Esc-cancel path.
 import assert from 'node:assert/strict';
-import { startServer, launchChrome, CdpPage } from './cdp.mjs';
+import { startServer, launchChrome, CdpPage, i18nStubSource } from './cdp.mjs';
 
 const server = await startServer();
 const chrome = await launchChrome();
@@ -13,6 +13,7 @@ try {
 
   const report = await page.evaluate(`(async () => {
     window.chrome = {
+      i18n: ${i18nStubSource},
       runtime: {
         getURL: (p) => '/' + p,
         onMessage: { addListener: () => {} },

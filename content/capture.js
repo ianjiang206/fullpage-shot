@@ -103,7 +103,7 @@ export class CaptureSession {
   async #warmUp() {
     const maxScroll = Math.max(0, this.#target.contentHeight - this.#target.viewportHeight);
     if (maxScroll <= 0) return;
-    if (this.#onStatus) this.#onStatus('预热');
+    if (this.#onStatus) this.#onStatus(chrome.i18n.getMessage('statusWarmup'));
     for (let y = 0; y < maxScroll; y += this.#target.viewportHeight) {
       if (this.#aborted) return;
       this.#target.setTop(y);
@@ -118,14 +118,14 @@ export class CaptureSession {
   #plan() {
     // All frame-planning / part-splitting / slicing geometry happens in capture
     // coordinates (0 = the selection's top edge in content coordinates, startY);
-    // scrolling translates back via setTop(frame + startY). 「截取整页」 carries
-    // fromTop and starts at 0.
+    // scrolling translates back via setTop(frame + startY). The full-page
+    // capture option carries fromTop and starts at 0.
     this.#viewportHeight = this.#target.viewportHeight;
     const contentHeight = this.#target.contentHeight;
     this.#startY = this.#selection.fromTop ? 0
       : geometry.selectionStartY(this.#selection.y, this.#target.captureOriginY());
     if (this.#startY >= contentHeight) {
-      throw new Error('选区起点已在内容末尾之后，请重新框选');
+      throw new Error(chrome.i18n.getMessage('errorSelectionBeyondEnd'));
     }
     this.#captureHeight = contentHeight - this.#startY;
     this.#frames = geometry.planFrames(this.#captureHeight, this.#viewportHeight);
@@ -168,7 +168,7 @@ export class CaptureSession {
     const dpr = firstBitmap.width / window.innerWidth;
     const parts = geometry.splitIntoParts(this.#frames, this.#viewportHeight, this.#captureHeight, dpr);
     const column = geometry.cropColumn(this.#selection.x, this.#selection.width, window.innerWidth, dpr);
-    if (column.width <= 0) throw new Error('裁剪列宽度为 0，请重新框选');
+    if (column.width <= 0) throw new Error(chrome.i18n.getMessage('errorZeroCropWidth'));
     const canvases = parts.map((part) => {
       const canvas = document.createElement('canvas');
       canvas.width = column.width;

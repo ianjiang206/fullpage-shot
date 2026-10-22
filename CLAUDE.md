@@ -28,7 +28,7 @@ MV3 extension, plain JS. Permissions are only `activeTab` + `scripting` (no host
 
 ## Conventions
 
-- Comments and documentation are in English; product UI strings (buttons, hints, error messages, badge text) stay Chinese.
+- Comments and documentation are in English; product UI strings live in `_locales` (en is `default_locale`; zh_TW mirrors zh_CN) and are referenced via `chrome.i18n.getMessage` / `__MSG_*__`.
 - The spec is a living document: `docs/superpowers/specs/2026-10-21-fullpage-shot-design.md`. Amend the relevant section whenever behavior changes.
 - Commit messages use Chinese with a conventional prefix (`fix:` / `feat:` / `style:` etc.).
 - Established tool for diagnosing real-site issues: the headless-CDP probes in `test/probe/` (`cdp.mjs` is the shared harness). They serve the repo over HTTP, dynamic-import the modules into a live page with `chrome.*` stubbed, and drive them directly — e.g. `node test/probe/capture-e2e.mjs` runs a full capture headlessly (frames bridged to `Page.captureScreenshot`). Set `CHROME_BIN` if the binary is not `google-chrome`.

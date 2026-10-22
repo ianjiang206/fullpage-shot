@@ -31,7 +31,10 @@ class CaptureFlow {
       this.#enterPreview(await session.run());
     } catch (error) {
       if (error && error.message === 'aborted') this.#exitToIdle(); // user cancelled with Esc
-      else this.#enterError('截取失败：' + (error && error.message ? error.message : error));
+      else {
+        this.#enterError(chrome.i18n.getMessage('captureFailed',
+          String(error && error.message ? error.message : error)));
+      }
     } finally {
       chrome.runtime.sendMessage({ type: MSG.DONE });
     }

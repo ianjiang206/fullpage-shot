@@ -1,0 +1,135 @@
+{
+  "appDescription": {
+    "message": "框选区域，滚动拼接截取整个网页内容。",
+    "description": "Extension description shown by Chrome and in the Web Store."
+  },
+  "actionTitle": {
+    "message": "截取页面",
+    "description": "Toolbar action tooltip."
+  },
+  "unsupportedTitle": {
+    "message": "此页面不支持截图",
+    "description": "Toolbar action tooltip on pages where screenshots are not supported."
+  },
+  "selectHintEmpty": {
+    "message": "拖拽框选要截取的区域",
+    "description": "Hint shown before a selection is made."
+  },
+  "selectHintReselect": {
+    "message": "拖拽任意处可重新框选",
+    "description": "Hint shown when a selection already exists."
+  },
+  "cancel": {
+    "message": "取消",
+    "description": "Cancel button label."
+  },
+  "capture": {
+    "message": "截取",
+    "description": "Primary button label for capturing the selected area."
+  },
+  "captureFullPage": {
+    "message": "截取整页",
+    "description": "Primary button label for capturing the whole page."
+  },
+  "selectionSize": {
+    "message": "宽 $WIDTH$ px · 从此处截到页尾",
+    "description": "Selection size label; $WIDTH$ is the selection width in CSS pixels.",
+    "placeholders": {
+      "width": {
+        "content": "$1",
+        "example": "1280"
+      }
+    }
+  },
+  "resultTitle": {
+    "message": "截取完成",
+    "description": "Title of the capture result overlay."
+  },
+  "resultMetaSplit": {
+    "message": "共 $COUNT$ 张（超长自动拆分）",
+    "description": "Meta note when the capture is split; $COUNT$ is the number of parts.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "downloadOne": {
+    "message": "下载 PNG",
+    "description": "Download button label for a single PNG."
+  },
+  "downloadMany": {
+    "message": "下载 $COUNT$ 张 PNG",
+    "description": "Download button label for multiple PNGs; $COUNT$ is the number of parts.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "copy": {
+    "message": "复制到剪贴板",
+    "description": "Copy-to-clipboard button label."
+  },
+  "copied": {
+    "message": "已复制到剪贴板",
+    "description": "Note shown after a successful copy."
+  },
+  "copiedScaled": {
+    "message": "已复制（超长，已等比缩放至上限内）",
+    "description": "Note shown after copying a capture scaled down to fit the size limit."
+  },
+  "copyFailed": {
+    "message": "复制失败（$REASON$），请使用下载",
+    "description": "Copy failure note; $REASON$ is the underlying error.",
+    "placeholders": {
+      "reason": {
+        "content": "$1",
+        "example": "denied"
+      }
+    }
+  },
+  "reselect": {
+    "message": "重新选择",
+    "description": "Button label that returns to selection mode."
+  },
+  "close": {
+    "message": "关闭",
+    "description": "Close button label."
+  },
+  "errorTitle": {
+    "message": "出错了",
+    "description": "Title of the error overlay."
+  },
+  "toBlobFailed": {
+    "message": "toBlob 失败",
+    "description": "Error shown when canvas.toBlob produces no image."
+  },
+  "statusWarmup": {
+    "message": "预热",
+    "description": "Badge status text during the warm-up scroll."
+  },
+  "errorSelectionBeyondEnd": {
+    "message": "选区起点已在内容末尾之后，请重新框选",
+    "description": "Error shown when the selection starts past the content end."
+  },
+  "errorZeroCropWidth": {
+    "message": "裁剪列宽度为 0，请重新框选",
+    "description": "Error shown when the selected crop area is zero pixels wide."
+  },
+  "captureFailed": {
+    "message": "截取失败：$REASON$",
+    "description": "Capture failure message; $REASON$ is the underlying error.",
+    "placeholders": {
+      "reason": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorTallInnerScroller": {
+    "message": "内部滚动容器高于视口，暂不支持完整截取；请改用「截取整页」",
+    "description": "Error shown when an inner scroll container is taller than the viewport."
+  }
+}

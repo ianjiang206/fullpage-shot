@@ -2,14 +2,14 @@
 // ContainerScrollTarget for that element; resolving in the plain content
 // column yields a WindowScrollTarget. Also checks saveScrollBehavior restore.
 import assert from 'node:assert/strict';
-import { startServer, launchChrome, CdpPage } from './cdp.mjs';
+import { startServer, launchChrome, CdpPage, i18nStubSource } from './cdp.mjs';
 
 const server = await startServer();
 const chrome = await launchChrome();
 try {
   const page = await CdpPage.open('http://127.0.0.1:8931/test/fixtures/long-page.html');
   const report = await page.evaluate(`(async () => {
-    window.chrome = { runtime: { getURL: (p) => '/' + p, onMessage: { addListener: () => {} }, sendMessage: async () => ({}) } };
+    window.chrome = { i18n: ${i18nStubSource}, runtime: { getURL: (p) => '/' + p, onMessage: { addListener: () => {} }, sendMessage: async () => ({}) } };
     const { ScrollTarget } = await import('/content/scroll-target.js');
     const inner = document.getElementById('inner');
     window.scrollTo(0, inner.offsetTop - 120); // the container sits below the fold

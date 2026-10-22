@@ -7,39 +7,48 @@ export class ResultOverlay extends Overlay {
   constructor({ parts, width, totalHeight, dpr, onRetry, onClose }) {
     super({ onClose });
 
-    const title = h('div', { class: 'fps-title', text: '截取完成' });
+    const title = h('div', { class: 'fps-title', text: chrome.i18n.getMessage('resultTitle') });
     const thumbWrap = h('div', { class: 'fps-thumb-wrap' }, ResultOverlay.#thumbnail(parts[0].canvas));
     const meta = h('div', {
       class: 'fps-meta',
-      text: `${width} × ${totalHeight} px` + (parts.length > 1 ? ` · 共 ${parts.length} 张（超长自动拆分）` : ''),
+      text: `${width} × ${totalHeight} px` + (parts.length > 1
+        ? ' · ' + chrome.i18n.getMessage('resultMetaSplit', String(parts.length))
+        : ''),
     });
     const note = h('div', { class: 'fps-note' });
     const downloadButton = h('button', {
       type: 'button', class: 'fps-btn fps-primary',
-      text: parts.length > 1 ? `下载 ${parts.length} 张 PNG` : '下载 PNG',
+      text: parts.length > 1
+        ? chrome.i18n.getMessage('downloadMany', String(parts.length))
+        : chrome.i18n.getMessage('downloadOne'),
       onClick: () => ResultOverlay.downloadAll(parts),
     });
-    const copyButton = h('button', { type: 'button', class: 'fps-btn', text: '复制到剪贴板' });
+    const copyButton = h('button', {
+      type: 'button', class: 'fps-btn', text: chrome.i18n.getMessage('copy'),
+    });
     copyButton.addEventListener('click', async () => {
       copyButton.disabled = true;
       try {
         const scaled = fitScale(width, totalHeight) < 1;
         const blob = await ResultOverlay.buildSingleBlob(parts, width, totalHeight, dpr);
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        note.textContent = scaled ? '已复制（超长，已等比缩放至上限内）' : '已复制到剪贴板';
+        note.textContent = scaled
+          ? chrome.i18n.getMessage('copiedScaled')
+          : chrome.i18n.getMessage('copied');
       } catch (error) {
-        note.textContent = '复制失败（' + (error && error.message ? error.message : error) + '），请使用下载';
+        note.textContent = chrome.i18n.getMessage('copyFailed',
+          String(error && error.message ? error.message : error));
       } finally {
         copyButton.disabled = false;
       }
     });
     const retryButton = h('button', {
-      type: 'button', class: 'fps-btn', text: '重新选择',
+      type: 'button', class: 'fps-btn', text: chrome.i18n.getMessage('reselect'),
       // close() fires onClose (state back to idle) before retry re-enters selecting
       onClick: () => { this.close(); if (onRetry) onRetry(); },
     });
     const closeButton = h('button', {
-      type: 'button', class: 'fps-btn', text: '关闭',
+      type: 'button', class: 'fps-btn', text: chrome.i18n.getMessage('close'),
       onClick: () => this.close(),
     });
     const actions = h('div', { class: 'fps-actions' }, downloadButton, copyButton, retryButton, closeButton);
@@ -73,7 +82,9 @@ export class ResultOverlay extends Overlay {
       ctx.drawImage(part.canvas, 0, 0, part.canvas.width, part.canvas.height, 0, dy, canvas.width, dh);
     }
     return new Promise((resolve, reject) =>
-      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('toBlob 失败'))), 'image/png'));
+      canvas.toBlob((blob) => (blob
+        ? resolve(blob)
+        : reject(new Error(chrome.i18n.getMessage('toBlobFailed')))), 'image/png'));
   }
 
   static downloadAll(parts) {
@@ -100,10 +111,10 @@ export class ResultOverlay extends Overlay {
 export class ErrorOverlay extends Overlay {
   constructor(message, onClose) {
     super({ onClose });
-    const title = h('div', { class: 'fps-title', text: '出错了' });
+    const title = h('div', { class: 'fps-title', text: chrome.i18n.getMessage('errorTitle') });
     const text = h('div', { class: 'fps-meta', text: message });
     const closeButton = h('button', {
-      type: 'button', class: 'fps-btn', text: '关闭',
+      type: 'button', class: 'fps-btn', text: chrome.i18n.getMessage('close'),
       onClick: () => this.close(),
     });
     const panel = h('div', { class: 'fps-panel' }, title, text, h('div', { class: 'fps-actions' }, closeButton));

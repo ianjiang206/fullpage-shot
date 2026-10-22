@@ -114,7 +114,7 @@ export class ContainerScrollTarget extends ScrollTarget {
   // Frame planning and frame capture only agree when the container's content
   // box is fully visible in the viewport: top-align it via window scroll, or
   // report a clear error when it is taller than the viewport (no silent
-  // misalignment — suggest 「截取整页」 instead).
+  // misalignment — suggest the full-page capture option instead).
   ensureFullyVisible() {
     const contentTop = () => this.element.getBoundingClientRect().top + this.element.clientTop;
     let visibility = containerVisibility(contentTop(), this.element.clientHeight, window.innerHeight);
@@ -123,7 +123,7 @@ export class ContainerScrollTarget extends ScrollTarget {
       visibility = containerVisibility(contentTop(), this.element.clientHeight, window.innerHeight);
     }
     if (visibility !== 'ok') {
-      throw new Error('内部滚动容器高于视口，暂不支持完整截取；请改用「截取整页」');
+      throw new Error(chrome.i18n.getMessage('errorTallInnerScroller'));
     }
   }
 }

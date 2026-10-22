@@ -3,7 +3,7 @@
 // Verifies: ESM graph links, exports exist, no window.Fps* globals remain, and
 // the zero-area sticky shell is collected via its descendant bounding box.
 import assert from 'node:assert/strict';
-import { startServer, launchChrome, CdpPage } from './cdp.mjs';
+import { startServer, launchChrome, CdpPage, i18nStubSource } from './cdp.mjs';
 
 const server = await startServer();
 const chrome = await launchChrome();
@@ -11,6 +11,7 @@ try {
   const page = await CdpPage.open('http://127.0.0.1:8931/test/fixtures/long-page.html');
   const report = await page.evaluate(`(async () => {
     window.chrome = {
+      i18n: ${i18nStubSource},
       runtime: {
         getURL: (p) => '/' + p,
         sendMessage: async () => ({}),
@@ -39,6 +40,7 @@ try {
     let listener = null;
     let addListenerCalls = 0;
     window.chrome = {
+      i18n: ${i18nStubSource},
       runtime: {
         getURL: (p) => '/' + p,
         sendMessage: async () => ({}),

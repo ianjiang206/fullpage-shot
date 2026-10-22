@@ -7,11 +7,38 @@ import { spawn } from 'node:child_process';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 export const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
+
+// Page-side chrome.i18n backed by the real zh_CN catalog, so probes exercise
+// the same localized strings the extension renders. Embed it in an evaluate
+// template literal as: window.chrome = { i18n: ${i18nStubSource}, ... }.
+const ZH_CN_CATALOG = JSON.parse(readFileSync(
+  new URL('../../_locales/zh_CN/messages.json', import.meta.url), 'utf8'));
+
+export const i18nStubSource = `(() => {
+  const catalog = ${JSON.stringify(ZH_CN_CATALOG)};
+  return {
+    getMessage(key, subs) {
+      const entry = catalog[key];
+      if (!entry) return key;
+      const values = subs === undefined || subs === null
+        ? [] : (Array.isArray(subs) ? subs : [subs]);
+      return entry.message.replace(/\\$([A-Za-z0-9_]+)\\$/g, (token, name) => {
+        const placeholder = Object.entries(entry.placeholders || {})
+          .find(([placeholderName]) => placeholderName.toLowerCase() === name.toLowerCase());
+        if (!placeholder) return token;
+        const ref = /^\\$(\\d+)$/.exec(placeholder[1].content);
+        if (!ref) return token;
+        const value = values[Number(ref[1]) - 1];
+        return value === undefined || value === null ? '' : String(value);
+      });
+    },
+  };
+})()`;
 
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript',
