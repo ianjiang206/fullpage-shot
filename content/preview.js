@@ -1,7 +1,7 @@
 'use strict';
 // Result preview overlay: thumbnail + PNG download (multi-part downloads in sequence)
 // + copy to clipboard (oversized images auto-scaled) + retry/close.
-window.FpsPreview = (() => {
+import { fitScale } from './stitch.js';
 
   function mkBtn(text, cls) {
     const b = document.createElement('button');
@@ -29,7 +29,7 @@ window.FpsPreview = (() => {
 
   // Stitch parts into a single blob; scale down past MAX_PART_SIZE (clipboard takes one image only)
   function buildSingleBlob(parts, width, totalHeight, dpr) {
-    const scale = window.FpsStitch.fitScale(width, totalHeight);
+    const scale = fitScale(width, totalHeight);
     const c = document.createElement('canvas');
     c.width = Math.max(1, Math.round(width * scale));
     c.height = Math.max(1, Math.round(totalHeight * scale));
@@ -117,7 +117,7 @@ window.FpsPreview = (() => {
     copyBtn.addEventListener('click', async () => {
       copyBtn.disabled = true;
       try {
-        const scaled = window.FpsStitch.fitScale(width, totalHeight) < 1;
+        const scaled = fitScale(width, totalHeight) < 1;
         const blob = await buildSingleBlob(parts, width, totalHeight, dpr);
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
         note.textContent = scaled ? '已复制（超长，已等比缩放至上限内）' : '已复制到剪贴板';
@@ -154,5 +154,4 @@ window.FpsPreview = (() => {
     return { close: () => host.remove() };
   }
 
-  return { show, showError };
-})();
+export { show, showError };

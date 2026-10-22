@@ -3,7 +3,9 @@
 // scroll/settle/screenshot/draw → scene restoration.
 // Frame drawing is clipped to the selection's crop column; fixed/sticky elements
 // follow the WYSIWYG visibility rules (spec §5.3).
-window.FpsCapture = (() => {
+import * as stitch from './stitch.js';
+import { MSG } from '../shared/protocol.js';
+
   const FRAME_MIN_INTERVAL = 520; // captureVisibleTab is rate-limited to 2/sec; leave headroom
   const LAZY_WAIT = 300;          // per-frame allowance for lazy-loaded content
   const SETTLE_TIMEOUT = 2000;
@@ -23,7 +25,7 @@ window.FpsCapture = (() => {
       chain.push({ el, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight });
       el = el.parentElement;
     }
-    return window.FpsStitch.pickScrollTarget(chain);
+    return stitch.pickScrollTarget(chain);
   }
 
   // Collect visible fixed/sticky elements plus their original inline visibility
@@ -40,7 +42,7 @@ window.FpsCapture = (() => {
       if (cs.position !== 'fixed' && cs.position !== 'sticky') continue;
       if (cs.display === 'none' || cs.visibility === 'hidden') continue;
       const r = el.getBoundingClientRect();
-      const rect = window.FpsStitch.visualRect(
+      const rect = stitch.visualRect(
         { left: r.left, right: r.right, top: r.top, bottom: r.bottom },
         (r.width === 0 || r.height === 0) ? visibleChildRects(el) : null);
       if (!rect) continue;
@@ -88,7 +90,7 @@ window.FpsCapture = (() => {
     let lastErr = 'empty response';
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       lastCaptureAt = Date.now();
-      const resp = await chrome.runtime.sendMessage({ type: 'fps:capture' });
+      const resp = await chrome.runtime.sendMessage({ type: MSG.CAPTURE });
       if (resp && resp.dataUrl) return resp.dataUrl;
       lastErr = (resp && resp.error) || lastErr;
       if (!/MAX_CAPTURE_VISIBLE_TAB|too many/i.test(lastErr)) throw new Error(lastErr);
@@ -149,7 +151,7 @@ window.FpsCapture = (() => {
     // toolbar" as uncovered.
     const selBounds = { left: sel.x, right: sel.x + sel.w, top: sel.y, bottom: sel.y + sel.h };
     for (const f of fixed) {
-      f.inSelection = window.FpsStitch.rectsOverlap(f.rect, selBounds);
+      f.inSelection = stitch.rectsOverlap(f.rect, selBounds);
     }
 
     let dpr = null;
@@ -162,7 +164,7 @@ window.FpsCapture = (() => {
       // and reveal animations and may grow the content height)
       const warmMax = Math.max(0, target.scrollHeight - (isWindow ? window.innerHeight : target.clientHeight));
       if (warmMax > 0) {
-        chrome.runtime.sendMessage({ type: 'fps:progress', text: '预热' });
+        chrome.runtime.sendMessage({ type: MSG.PROGRESS, text: '预热' });
         await warmUp(setTop, warmMax, isWindow ? window.innerHeight : target.clientHeight);
         if (aborted) throw new Error('aborted');
         setTop(initTop);
@@ -176,10 +178,10 @@ window.FpsCapture = (() => {
       let containerTop = 0;
       if (!isWindow) {
         const contentTop = () => target.getBoundingClientRect().top + target.clientTop;
-        let visibility = window.FpsStitch.containerVisibility(contentTop(), target.clientHeight, window.innerHeight);
+        let visibility = stitch.containerVisibility(contentTop(), target.clientHeight, window.innerHeight);
         if (visibility === 'align') {
           window.scrollBy(0, contentTop());
-          visibility = window.FpsStitch.containerVisibility(contentTop(), target.clientHeight, window.innerHeight);
+          visibility = stitch.containerVisibility(contentTop(), target.clientHeight, window.innerHeight);
         }
         if (visibility !== 'ok') {
           throw new Error('内部滚动容器高于视口，暂不支持完整截取；请改用「截取整页」');
@@ -195,12 +197,12 @@ window.FpsCapture = (() => {
       // coordinates" (0 = startY); scrolling translates back to content coordinates
       // via setTop(frame + startY).
       const frameOriginY = isWindow ? -getTop() : containerTop - target.scrollTop;
-      const startY = sel.fromTop ? 0 : window.FpsStitch.selectionStartY(sel.y, frameOriginY);
+      const startY = sel.fromTop ? 0 : stitch.selectionStartY(sel.y, frameOriginY);
       if (startY >= contentHeight) {
         throw new Error('选区起点已在内容末尾之后，请重新框选');
       }
       const capContent = contentHeight - startY;
-      const frames = window.FpsStitch.planFrames(capContent, viewportHeight);
+      const frames = stitch.planFrames(capContent, viewportHeight);
 
       // Natural document position of sticky elements (content coordinates): measure
       // by temporarily switching to relative + top:auto (sticky and relative occupy
@@ -212,7 +214,7 @@ window.FpsCapture = (() => {
       for (const f of fixed) {
         f.naturalTop = null;
         if (!f.sticky || (!isWindow && !target.contains(f.el))) continue;
-        if (window.FpsStitch.stickyIsContent(f.height, viewportHeight)) continue;
+        if (stitch.stickyIsContent(f.height, viewportHeight)) continue;
         const prevPos = f.el.style.position;
         const prevTop = f.el.style.top;
         f.el.style.position = 'relative';
@@ -249,9 +251,9 @@ window.FpsCapture = (() => {
         // 3) content-level stickies (taller than half the viewport) are never hidden;
         // 4) everything else is hidden — no duplicates, no occlusion
         for (const f of fixed) {
-          if (f.sticky && window.FpsStitch.stickyIsContent(f.height, viewportHeight)) continue;
+          if (f.sticky && stitch.stickyIsContent(f.height, viewportHeight)) continue;
           const atNaturalPlace = f.sticky && f.naturalTop !== null &&
-            window.FpsStitch.stickyVisible(frames[i] + startY, f.naturalTop, f.cssTop);
+            stitch.stickyVisible(frames[i] + startY, f.naturalTop, f.cssTop);
           const visible = atNaturalPlace || (i === 0 && f.inSelection);
           f.el.style.visibility = visible ? f.prev : 'hidden';
         }
@@ -263,8 +265,8 @@ window.FpsCapture = (() => {
           // Measure dpr from the first frame (img.width = innerWidth × real dpr,
           // including page zoom)
           dpr = img.width / window.innerWidth;
-          parts = window.FpsStitch.assignParts(frames, viewportHeight, capContent, dpr);
-          colRect = window.FpsStitch.cropRect(sel.x, sel.w, window.innerWidth, dpr);
+          parts = stitch.assignParts(frames, viewportHeight, capContent, dpr);
+          colRect = stitch.cropRect(sel.x, sel.w, window.innerWidth, dpr);
           if (colRect.sw <= 0) throw new Error('裁剪列宽度为 0，请重新框选');
           canvases = parts.map((p) => {
             const c = document.createElement('canvas');
@@ -277,7 +279,7 @@ window.FpsCapture = (() => {
         for (let p = 0; p < parts.length; p++) {
           const part = parts[p];
           if (i < part.frameStart || i >= part.frameEnd) continue;
-          const slice = window.FpsStitch.frameSlice(frames[i], viewportHeight, capContent, part.srcY, part.height);
+          const slice = stitch.frameSlice(frames[i], viewportHeight, capContent, part.srcY, part.height);
           if (!slice) continue;
           canvases[p].getContext('2d').drawImage(
             img,
@@ -298,9 +300,8 @@ window.FpsCapture = (() => {
       window.scrollTo(initWinX, initWinY);
       for (const f of fixed) f.el.style.visibility = f.prev;
       for (const [el, prev] of scrollBehaviorSaved) el.style.scrollBehavior = prev;
-      chrome.runtime.sendMessage({ type: 'fps:done' });
+      chrome.runtime.sendMessage({ type: MSG.DONE });
     }
   }
 
-  return { capture, cancel, findScrollContainer, collectFixedElements };
-})();
+export { capture, cancel, findScrollContainer, collectFixedElements };

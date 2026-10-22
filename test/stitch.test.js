@@ -1,9 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-// stitch.js is still UMD until Task 2; under node ESM the guarded `module`
-// reference is skipped and the API lands on globalThis.
-import '../content/stitch.js';
-const S = globalThis.FpsStitch;
+import * as S from '../content/stitch.js';
 
 // --- planFrames ---
 test('planFrames: short page yields a single frame, no scrolling', () => {

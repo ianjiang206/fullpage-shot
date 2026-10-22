@@ -1,14 +1,7 @@
-'use strict';
 // Pure-function module: frame planning, frame/part intersection, part assignment,
 // crop-column mapping, fit scale, scroll-container selection.
-// No DOM/Chrome dependencies — node can require it directly for unit tests;
-// in the browser it mounts as window.FpsStitch.
-(function (root, factory) {
-  const api = factory();
-  root.FpsStitch = api;
-  if (typeof module !== 'undefined' && module.exports) module.exports = api;
-})(typeof self !== 'undefined' ? self : globalThis, function () {
-  const MAX_PART_SIZE = 16384; // conservative Chrome canvas max dimension (device px)
+// No DOM/Chrome dependencies — node imports it directly for unit tests.
+const MAX_PART_SIZE = 16384; // conservative Chrome canvas max dimension (device px)
 
   // Frame scroll positions: step = viewportHeight, last frame bottom-aligned;
   // content within one screen → [0].
@@ -144,5 +137,4 @@
     return right > left && bottom > top ? { left, right, top, bottom } : null;
   }
 
-  return { planFrames, frameSlice, assignParts, cropRect, fitScale, pickScrollTarget, containerVisibility, selectionStartY, stickyVisible, rectsOverlap, stickyIsContent, visualRect, MAX_PART_SIZE };
-});
+export { planFrames, frameSlice, assignParts, cropRect, fitScale, pickScrollTarget, containerVisibility, selectionStartY, stickyVisible, rectsOverlap, stickyIsContent, visualRect, MAX_PART_SIZE };

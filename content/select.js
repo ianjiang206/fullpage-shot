@@ -3,7 +3,6 @@
 // Esc cancels; pressing anywhere on the mask redraws; with no selection the action
 // button is 「截取整页」 (full width, from the top).
 // Styles are isolated via shadow DOM + overlay.css injected through web_accessible_resources.
-window.FpsSelect = (() => {
   const DRAG_THRESHOLD = 4; // px; smaller than this counts as a click (redraw)
   const SCROLL_KEYS = [' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End'];
 
@@ -130,5 +129,4 @@ window.FpsSelect = (() => {
     return { close: () => finish('cancel') };
   }
 
-  return { start };
-})();
+export { start };
