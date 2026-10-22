@@ -1,62 +1,69 @@
-// State machine: idle → selecting → capturing → preview → (retry back to selecting / close back to idle)
+// State machine: idle → selecting → capturing → preview → (retry → selecting / close → idle)
 import { MSG } from '../shared/protocol.js';
 import { SelectionOverlay } from './select.js';
-import * as capture from './capture.js';
+import { CaptureSession } from './capture.js';
 import { ResultOverlay, ErrorOverlay } from './preview.js';
 
-let phase = 'idle'; // idle | selecting | capturing | preview
-let ui = null;      // current overlay's {close()}
+class CaptureFlow {
+  #phase = 'idle';
 
-function twoFrames() {
-  return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-}
+  start() {
+    if (this.#phase !== 'idle') return; // a flow is already running; ignore repeated clicks
+    this.#enterSelecting();
+  }
 
-function start() {
-  if (phase !== 'idle') return; // a flow is already running; ignore repeated clicks
-  beginSelect();
-}
-
-function beginSelect() {
-  phase = 'selecting';
-  ui = new SelectionOverlay({
-    onConfirm,
-    onCancel: () => { phase = 'idle'; ui = null; },
-  });
-}
-
-async function onConfirm(sel) {
-  ui = null; // the selection overlay has already removed itself
-  phase = 'capturing';
-  await twoFrames(); // wait for the mask to actually leave composited frames so it never appears in frame 0
-  const session = new capture.CaptureSession(sel, {
-    onProgress: (i, n) => chrome.runtime.sendMessage({ type: MSG.PROGRESS, text: `${i}/${n}` }),
-    onStatus: (text) => chrome.runtime.sendMessage({ type: MSG.PROGRESS, text }),
-  });
-  try {
-    const result = await session.run();
-    phase = 'preview';
-    ui = new ResultOverlay({
-      ...result,
-      onRetry: () => { beginSelect(); },
-      onClose: () => { phase = 'idle'; ui = null; },
+  #enterSelecting() {
+    this.#phase = 'selecting';
+    new SelectionOverlay({
+      onConfirm: (selection) => this.#enterCapturing(selection),
+      onCancel: () => this.#exitToIdle(),
     });
-  } catch (e) {
-    if (e && e.message === 'aborted') {
-      phase = 'idle'; // user cancelled with Esc: silently back to idle
-      return;
+  }
+
+  async #enterCapturing(selection) {
+    this.#phase = 'capturing';
+    await waitTwoFrames(); // the mask must actually leave composited frames so it never appears in frame 0
+    const session = new CaptureSession(selection, {
+      onProgress: (index, total) => chrome.runtime.sendMessage({ type: MSG.PROGRESS, text: `${index}/${total}` }),
+      onStatus: (text) => chrome.runtime.sendMessage({ type: MSG.PROGRESS, text }),
+    });
+    try {
+      this.#enterPreview(await session.run());
+    } catch (error) {
+      if (error && error.message === 'aborted') this.#exitToIdle(); // user cancelled with Esc
+      else this.#enterError('截取失败：' + (error && error.message ? error.message : error));
+    } finally {
+      chrome.runtime.sendMessage({ type: MSG.DONE });
     }
-    phase = 'preview';
-    ui = new ErrorOverlay(
-      '截取失败：' + (e && e.message ? e.message : e),
-      () => { phase = 'idle'; ui = null; },
-    );
-  } finally {
-    chrome.runtime.sendMessage({ type: MSG.DONE }); // the badge clears here now, not in capture.js
+  }
+
+  #enterPreview(result) {
+    this.#phase = 'preview';
+    new ResultOverlay({
+      ...result,
+      // ResultOverlay.close() fires onClose (back to idle) before onRetry runs
+      onRetry: () => this.#enterSelecting(),
+      onClose: () => this.#exitToIdle(),
+    });
+  }
+
+  #enterError(message) {
+    this.#phase = 'preview';
+    new ErrorOverlay(message, () => this.#exitToIdle());
+  }
+
+  #exitToIdle() {
+    this.#phase = 'idle';
   }
 }
 
+function waitTwoFrames() {
+  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
+const flow = new CaptureFlow();
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === MSG.PING) { sendResponse({ ok: true }); return false; }
-  if (msg.type === MSG.START) { start(); sendResponse({ ok: true }); return false; }
+  if (msg.type === MSG.START) { flow.start(); sendResponse({ ok: true }); return false; }
   return false;
 });

@@ -2,6 +2,32 @@ import { MSG } from './shared/protocol.js';
 
 const DEFAULT_TITLE = '截取页面';
 
+// MessageRouter maps message types to handlers, centralizing the no-tab guard
+// and Chrome's async-sendResponse channel rules: a handler returning a
+// Promise keeps the channel open and its resolution is the response.
+class MessageRouter {
+  #handlers = new Map();
+
+  on(type, handler) {
+    this.#handlers.set(type, handler);
+    return this;
+  }
+
+  listen() {
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+      const tab = sender.tab;
+      const handler = this.#handlers.get(msg.type);
+      if (!tab || tab.id == null || !handler) return false;
+      const result = handler(msg, tab);
+      if (result instanceof Promise) {
+        result.then(sendResponse);
+        return true; // keep the channel open for the async response
+      }
+      return false;
+    });
+  }
+}
+
 function ping(tabId) {
   return new Promise((resolve) => {
     chrome.tabs.sendMessage(tabId, { type: MSG.PING }, (resp) => {
@@ -32,33 +58,22 @@ chrome.action.onClicked.addListener(async (tab) => {
       });
     }
     await chrome.tabs.sendMessage(tabId, { type: MSG.START });
-  } catch (e) {
+  } catch {
     await markUnsupported(tabId);
   }
 });
 
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  const tabId = sender.tab && sender.tab.id;
-  if (tabId == null) return false;
-
-  if (msg.type === MSG.CAPTURE) {
-    chrome.tabs.captureVisibleTab(sender.tab.windowId, { format: 'png' }, (dataUrl) => {
-      if (chrome.runtime.lastError) {
-        sendResponse({ error: chrome.runtime.lastError.message });
-      } else {
-        sendResponse({ dataUrl });
-      }
+new MessageRouter()
+  .on(MSG.CAPTURE, (msg, tab) => new Promise((resolve) => {
+    chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' }, (dataUrl) => {
+      resolve(chrome.runtime.lastError ? { error: chrome.runtime.lastError.message } : { dataUrl });
     });
-    return true; // async sendResponse
-  }
-  if (msg.type === MSG.PROGRESS) {
-    chrome.action.setBadgeBackgroundColor({ tabId, color: '#1a73e8' });
-    chrome.action.setBadgeText({ tabId, text: String(msg.text || '') });
-    return false;
-  }
-  if (msg.type === MSG.DONE) {
-    chrome.action.setBadgeText({ tabId, text: '' });
-    return false;
-  }
-  return false;
-});
+  }))
+  .on(MSG.PROGRESS, (msg, tab) => {
+    chrome.action.setBadgeBackgroundColor({ tabId: tab.id, color: '#1a73e8' });
+    chrome.action.setBadgeText({ tabId: tab.id, text: String(msg.text || '') });
+  })
+  .on(MSG.DONE, (msg, tab) => {
+    chrome.action.setBadgeText({ tabId: tab.id, text: '' });
+  })
+  .listen();
