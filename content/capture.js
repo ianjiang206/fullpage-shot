@@ -35,31 +35,38 @@ import { MSG } from '../shared/protocol.js';
   // Zero-area elements use the bounding box of visible descendants as their visual
   // rect; only those with no visible descendants are skipped.
   function collectFixedElements() {
-    const out = [];
-    for (const el of document.querySelectorAll('*')) {
-      if (el === document.documentElement || el === document.body) continue;
-      const cs = getComputedStyle(el);
-      if (cs.position !== 'fixed' && cs.position !== 'sticky') continue;
-      if (cs.display === 'none' || cs.visibility === 'hidden') continue;
-      const r = el.getBoundingClientRect();
+    const records = [];
+    for (const element of document.querySelectorAll('*')) {
+      if (element === document.documentElement || element === document.body) continue;
+      const style = getComputedStyle(element);
+      if (style.position !== 'fixed' && style.position !== 'sticky') continue;
+      if (style.display === 'none' || style.visibility === 'hidden') continue;
+      const own = element.getBoundingClientRect();
       const rect = geometry.visualRect(
-        { left: r.left, right: r.right, top: r.top, bottom: r.bottom },
-        (r.width === 0 || r.height === 0) ? visibleChildRects(el) : null);
+        { left: own.left, right: own.right, top: own.top, bottom: own.bottom },
+        (own.width === 0 || own.height === 0) ? visibleChildRects(element) : null);
       if (!rect) continue;
-      out.push({ el, prev: el.style.visibility, sticky: cs.position === 'sticky', cssTop: parseFloat(cs.top) || 0, height: r.height, rect });
+      records.push({
+        element,
+        previousVisibility: element.style.visibility,
+        isSticky: style.position === 'sticky',
+        cssTop: parseFloat(style.top) || 0,
+        height: own.height,
+        visualRect: rect,
+      });
     }
-    return out;
+    return records;
   }
 
   // Visible descendant rects of a zero-area element (capped at 50 to bound deep DOMs)
   function visibleChildRects(el) {
     const rects = [];
-    for (const d of el.querySelectorAll('*')) {
-      const dcs = getComputedStyle(d);
-      if (dcs.display === 'none' || dcs.visibility === 'hidden') continue;
-      const dr = d.getBoundingClientRect();
-      if (dr.width === 0 || dr.height === 0) continue;
-      rects.push({ left: dr.left, right: dr.right, top: dr.top, bottom: dr.bottom });
+    for (const descendant of el.querySelectorAll('*')) {
+      const style = getComputedStyle(descendant);
+      if (style.display === 'none' || style.visibility === 'hidden') continue;
+      const rect = descendant.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+      rects.push({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom });
       if (rects.length >= 50) break;
     }
     return rects;
@@ -141,7 +148,7 @@ import { MSG } from '../shared/protocol.js';
     }
 
     const fixed = collectFixedElements();
-    const fixedSet = new Set(fixed.map((f) => f.el));
+    const known = new Set(fixed.map((record) => record.element));
     // Record whether each element intersects the selection at selection time
     // (viewport coordinates; the page has not scrolled yet). Fixed/stuck elements
     // keep the same visual position at any scroll offset, so this check holds for
@@ -149,9 +156,9 @@ import { MSG } from '../shared/protocol.js';
     // wrappers (h:0 sticky + absolute descendants) the visible region lives on the
     // descendants, and the element's own rect would misjudge "selection covers the
     // toolbar" as uncovered.
-    const selBounds = { left: sel.x, right: sel.x + sel.w, top: sel.y, bottom: sel.y + sel.h };
-    for (const f of fixed) {
-      f.inSelection = geometry.rectsOverlap(f.rect, selBounds);
+    const selectionBounds = { left: sel.x, right: sel.x + sel.w, top: sel.y, bottom: sel.y + sel.h };
+    for (const record of fixed) {
+      record.coveredBySelection = geometry.rectsOverlap(record.visualRect, selectionBounds);
     }
 
     let dpr = null;
@@ -211,20 +218,20 @@ import { MSG } from '../shared/protocol.js';
       // in the content-coordinate sense, so naturalTop stays null (hidden throughout);
       // content-level stickies (taller than half the viewport, e.g. scroll-jacking
       // containers) are never hidden and need no measurement.
-      for (const f of fixed) {
-        f.naturalTop = null;
-        if (!f.sticky || (!isWindow && !target.contains(f.el))) continue;
-        if (geometry.stickyIsContent(f.height, viewportHeight)) continue;
-        const prevPos = f.el.style.position;
-        const prevTop = f.el.style.top;
-        f.el.style.position = 'relative';
-        f.el.style.top = 'auto';
-        const rect = f.el.getBoundingClientRect();
-        f.naturalTop = isWindow
+      for (const record of fixed) {
+        record.naturalTop = null;
+        if (!record.isSticky || (!isWindow && !target.contains(record.element))) continue;
+        if (geometry.stickyIsContent(record.height, viewportHeight)) continue;
+        const previousPosition = record.element.style.position;
+        const previousTop = record.element.style.top;
+        record.element.style.position = 'relative';
+        record.element.style.top = 'auto';
+        const rect = record.element.getBoundingClientRect();
+        record.naturalTop = isWindow
           ? rect.top + getTop()
           : rect.top - containerTop + target.scrollTop;
-        f.el.style.position = prevPos;
-        f.el.style.top = prevTop;
+        record.element.style.position = previousPosition;
+        record.element.style.top = previousTop;
       }
 
       for (let i = 0; i < frames.length; i++) {
@@ -235,27 +242,21 @@ import { MSG } from '../shared/protocol.js';
         await waitSettle(getTop);
         // Popup sweep: fixed/sticky elements that appear mid-capture (e.g. a delayed
         // cookie banner) were not part of the scene at selection time — fold them
-        // into the managed list with inSelection=false and naturalTop=null so the
+        // into the managed list with coveredBySelection=false and naturalTop=null so the
         // rules below hide them. (A full rescan per frame has a cost, but the frame
         // budget is ≥520ms, which easily covers it.)
-        for (const f of collectFixedElements()) {
-          if (!fixedSet.has(f.el)) {
-            fixedSet.add(f.el);
-            fixed.push({ ...f, inSelection: false, naturalTop: null });
+        for (const record of collectFixedElements()) {
+          if (!known.has(record.element)) {
+            known.add(record.element);
+            fixed.push({ ...record, coveredBySelection: false, naturalTop: null });
           }
         }
-        // Set occluding-element visibility before each screenshot. Semantics (WYSIWYG):
-        // 1) an unstuck sticky is in-flow content, visible once in its natural-position frame;
-        // 2) fixed / stuck sticky elements appear as-is once in frame 0 only if they
-        //    intersected the selection at selection time;
-        // 3) content-level stickies (taller than half the viewport) are never hidden;
-        // 4) everything else is hidden — no duplicates, no occlusion
-        for (const f of fixed) {
-          if (f.sticky && geometry.stickyIsContent(f.height, viewportHeight)) continue;
-          const atNaturalPlace = f.sticky && f.naturalTop !== null &&
-            geometry.stickyAtNaturalPosition(frames[i] + startY, f.naturalTop, f.cssTop);
-          const visible = atNaturalPlace || (i === 0 && f.inSelection);
-          f.el.style.visibility = visible ? f.prev : 'hidden';
+        // WYSIWYG visibility per element (pure decision in geometry.frameVisibility):
+        // unstuck stickies at their natural place; covered fixed/stuck elements once
+        // in frame 0; content-level stickies never hidden; everything else hidden.
+        for (const record of fixed) {
+          const visible = geometry.frameVisibility(record, frames[i] + startY, i === 0, viewportHeight);
+          record.element.style.visibility = visible ? record.previousVisibility : 'hidden';
         }
         await sleep(LAZY_WAIT);
         const dataUrl = await requestFrame();
@@ -298,7 +299,7 @@ import { MSG } from '../shared/protocol.js';
     } finally {
       setTop(initTop);
       window.scrollTo(initWinX, initWinY);
-      for (const f of fixed) f.el.style.visibility = f.prev;
+      for (const record of fixed) record.element.style.visibility = record.previousVisibility;
       for (const [el, prev] of scrollBehaviorSaved) el.style.scrollBehavior = prev;
       chrome.runtime.sendMessage({ type: MSG.DONE });
     }

@@ -136,3 +136,17 @@ export function visualRect(own, childRects) {
   }
   return right > left && bottom > top ? { left, right, top, bottom } : null;
 }
+
+// Per-frame visibility of one fixed/sticky record (main spec §5.3 WYSIWYG rules):
+// 1) a content-level sticky (taller than half the viewport) is never hidden;
+// 2) an unstuck sticky is in-flow content, visible in the frames where it sits
+//    at its natural position (regardless of selection coverage);
+// 3) anything else (fixed, or a stuck sticky) appears as-is once in frame 0,
+//    only if it intersected the selection at selection time.
+// record: {isSticky, height, naturalTop, cssTop, coveredBySelection} (pure fields).
+export function frameVisibility(record, frameY, isFirstFrame, viewportHeight) {
+  if (record.isSticky && stickyIsContent(record.height, viewportHeight)) return true;
+  if (record.isSticky && record.naturalTop != null &&
+      stickyAtNaturalPosition(frameY, record.naturalTop, record.cssTop)) return true;
+  return isFirstFrame && record.coveredBySelection === true;
+}

@@ -23,11 +23,11 @@ try {
     const preview = await import('/content/preview.js');
     await import('/content/main.js'); // registers its listener against the stub
     const fixed = capture.collectFixedElements();
-    const shell = fixed.find((f) => f.el.className === 'sticky-shell');
+    const shell = fixed.find((record) => record.element.className === 'sticky-shell');
     return {
       frames: geometry.planFrames(3200, 1000),
       fixedCount: fixed.length,
-      shellHasArea: !!shell && shell.rect.bottom > shell.rect.top,
+      shellHasArea: !!shell && shell.visualRect.bottom > shell.visualRect.top,
       exports: [typeof select.start, typeof capture.capture, typeof preview.show, typeof preview.showError],
       globals: ['FpsStitch', 'FpsSelect', 'FpsCapture', 'FpsPreview'].filter((n) => window[n] !== undefined),
     };

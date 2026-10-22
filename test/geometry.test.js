@@ -205,3 +205,37 @@ test('visualRect: zero area with no visible descendants → null (not collected)
   assert.equal(geometry.visualRect({ left: 5, right: 5, top: 5, bottom: 5 }, []), null);
   assert.equal(geometry.visualRect({ left: 5, right: 5, top: 5, bottom: 5 }, null), null);
 });
+
+// --- frameVisibility ---
+// The per-frame WYSIWYG visibility decision (main spec §5.3) as a pure function.
+const FIXED_BAR = { isSticky: false, height: 50, naturalTop: null, cssTop: 0, coveredBySelection: true };
+
+test('frameVisibility: a fixed element covered by the selection appears once in frame 0 only', () => {
+  assert.equal(geometry.frameVisibility(FIXED_BAR, 0, true, 900), true);
+  assert.equal(geometry.frameVisibility(FIXED_BAR, 1000, false, 900), false);
+});
+
+test('frameVisibility: a fixed element outside the selection never appears', () => {
+  const outside = { ...FIXED_BAR, coveredBySelection: false };
+  assert.equal(geometry.frameVisibility(outside, 0, true, 900), false);
+  assert.equal(geometry.frameVisibility(outside, 1000, false, 900), false);
+});
+
+test('frameVisibility: an unstuck sticky is visible at its natural position regardless of selection coverage', () => {
+  const sticky = { isSticky: true, height: 40, naturalTop: 260, cssTop: 0, coveredBySelection: false };
+  assert.equal(geometry.frameVisibility(sticky, 0, true, 900), true);    // in-flow content at its natural place
+  assert.equal(geometry.frameVisibility(sticky, 261, false, 900), false); // stuck, not covered → hidden
+});
+
+test('frameVisibility: a stuck sticky covered by the selection still appears once in frame 0', () => {
+  const sticky = { isSticky: true, height: 40, naturalTop: 100, cssTop: 0, coveredBySelection: true };
+  // frame 0 at scrollY 200 > naturalTop: stuck; the selection-time coverage wins
+  assert.equal(geometry.frameVisibility(sticky, 200, true, 900), true);
+  assert.equal(geometry.frameVisibility(sticky, 200, false, 900), false);
+});
+
+test('frameVisibility: content-level stickies are never hidden', () => {
+  const content = { isSticky: true, height: 900, naturalTop: null, cssTop: 0, coveredBySelection: false };
+  assert.equal(geometry.frameVisibility(content, 0, true, 900), true);
+  assert.equal(geometry.frameVisibility(content, 5000, false, 900), true);
+});
