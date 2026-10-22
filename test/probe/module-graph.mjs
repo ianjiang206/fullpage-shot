@@ -29,6 +29,9 @@ try {
       frames: geometry.planFrames(3200, 1000),
       fixedCount: fixed.length,
       shellHasArea: !!shell && shell.visualRect.bottom > shell.visualRect.top,
+      // Fixture sanity: the fixed sidebar must sit beside, not over, main
+      sidebarOverlap: document.querySelector('.sidebar').getBoundingClientRect().right
+        - document.querySelector('main').getBoundingClientRect().left,
       exports: [typeof SelectionOverlay, typeof capture.CaptureSession, typeof ResultOverlay, typeof ErrorOverlay],
       globals: ['FpsStitch', 'FpsSelect', 'FpsCapture', 'FpsPreview'].filter((n) => window[n] !== undefined),
     };
@@ -62,6 +65,7 @@ try {
   assert.deepEqual(report.frames, [0, 1000, 2000, 2200]);
   assert.ok(report.fixedCount >= 3, 'sidebar + sticky-header + sticky-shell collected');
   assert.equal(report.shellHasArea, true, 'h:0 sticky shell gets a descendant-bbox visual rect');
+  assert.ok(report.sidebarOverlap <= 0, 'fixture sidebar does not overlap main');
   assert.deepEqual(report.exports, ['function', 'function', 'function', 'function']);
   assert.deepEqual(report.globals, [], 'no window.Fps* globals remain');
   assert.equal(flowReport.addListenerCalls, 1, 'double import registers one listener');
