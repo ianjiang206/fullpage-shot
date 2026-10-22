@@ -14,6 +14,7 @@
   font: 13px/1.4 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 .fps-btn {
+  display: inline-flex; align-items: center; /* centers the kbd chip; no baseline hacks */
   border: 1px solid #d0d0d0; background: #fff; color: #3c4043;
   border-radius: 6px; padding: 5px 12px; cursor: pointer;
   font: 13px -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -25,7 +26,7 @@
 .fps-btn kbd {
   font: 11px/1 ui-monospace, monospace; padding: 2px 5px; margin-left: 6px;
   border-radius: 4px;
-  background: rgba(0,0,0,.06); color: inherit; vertical-align: 1px;
+  background: rgba(0,0,0,.06); color: inherit;
 }
 .fps-btn.fps-primary kbd { background: rgba(255,255,255,.18); }
 .fps-rect {
