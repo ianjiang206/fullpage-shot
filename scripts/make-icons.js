@@ -1,11 +1,11 @@
-'use strict';
 // Generates icons/icon{16,32,48,128}.png — pure node stdlib, no dependencies.
 // Design: blue square + white viewfinder frame + central lens dot.
-const zlib = require('zlib');
-const fs = require('fs');
-const path = require('path');
+// (ESM: no 'use strict', no __dirname.)
+import zlib from 'node:zlib';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
-const OUT = path.join(__dirname, '..', 'icons');
+const OUT = fileURLToPath(new URL('../icons', import.meta.url));
 
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);
@@ -70,6 +70,6 @@ function makePng(size) {
 
 fs.mkdirSync(OUT, { recursive: true });
 for (const size of [16, 32, 48, 128]) {
-  fs.writeFileSync(path.join(OUT, `icon${size}.png`), makePng(size));
+  fs.writeFileSync(`${OUT}/icon${size}.png`, makePng(size));
 }
 console.log('icons written to', OUT);
