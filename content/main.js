@@ -11,10 +11,6 @@ function twoFrames() {
   return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 }
 
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && phase === 'capturing') capture.cancel();
-}, true);
-
 function start() {
   if (phase !== 'idle') return; // a flow is already running; ignore repeated clicks
   beginSelect();
@@ -32,10 +28,12 @@ async function onConfirm(sel) {
   ui = null; // the selection overlay has already removed itself
   phase = 'capturing';
   await twoFrames(); // wait for the mask to actually leave composited frames so it never appears in frame 0
+  const session = new capture.CaptureSession(sel, {
+    onProgress: (i, n) => chrome.runtime.sendMessage({ type: MSG.PROGRESS, text: `${i}/${n}` }),
+    onStatus: (text) => chrome.runtime.sendMessage({ type: MSG.PROGRESS, text }),
+  });
   try {
-    const result = await capture.capture(sel, (i, n) => {
-      chrome.runtime.sendMessage({ type: MSG.PROGRESS, text: `${i}/${n}` });
-    });
+    const result = await session.run();
     phase = 'preview';
     ui = new ResultOverlay({
       ...result,
@@ -52,6 +50,8 @@ async function onConfirm(sel) {
       '截取失败：' + (e && e.message ? e.message : e),
       () => { phase = 'idle'; ui = null; },
     );
+  } finally {
+    chrome.runtime.sendMessage({ type: MSG.DONE }); // the badge clears here now, not in capture.js
   }
 }
 

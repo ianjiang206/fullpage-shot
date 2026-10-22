@@ -29,7 +29,7 @@ try {
       frames: geometry.planFrames(3200, 1000),
       fixedCount: fixed.length,
       shellHasArea: !!shell && shell.visualRect.bottom > shell.visualRect.top,
-      exports: [typeof SelectionOverlay, typeof capture.capture, typeof ResultOverlay, typeof ErrorOverlay],
+      exports: [typeof SelectionOverlay, typeof capture.CaptureSession, typeof ResultOverlay, typeof ErrorOverlay],
       globals: ['FpsStitch', 'FpsSelect', 'FpsCapture', 'FpsPreview'].filter((n) => window[n] !== undefined),
     };
   })()`);
