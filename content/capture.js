@@ -6,6 +6,7 @@
 import * as geometry from './geometry.js';
 import { MSG } from '../shared/protocol.js';
 import { ScrollTarget } from './scroll-target.js';
+import { FixedElementManager } from './fixed-elements.js';
 
   const FRAME_MIN_INTERVAL = 520; // captureVisibleTab is rate-limited to 2/sec; leave headroom
   const LAZY_WAIT = 300;          // per-frame allowance for lazy-loaded content
@@ -16,50 +17,6 @@ import { ScrollTarget } from './scroll-target.js';
 
   function cancel() { aborted = true; }
   function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
-
-  // Collect visible fixed/sticky elements plus their original inline visibility
-  // (for restoration). Zero-area elements must not be skipped wholesale: the GitHub
-  // blob toolbar is an h:0 sticky wrapper whose visible content is rendered by an
-  // absolute child — leaving it unmanaged makes it appear in every frame once stuck.
-  // Zero-area elements use the bounding box of visible descendants as their visual
-  // rect; only those with no visible descendants are skipped.
-  function collectFixedElements() {
-    const records = [];
-    for (const element of document.querySelectorAll('*')) {
-      if (element === document.documentElement || element === document.body) continue;
-      const style = getComputedStyle(element);
-      if (style.position !== 'fixed' && style.position !== 'sticky') continue;
-      if (style.display === 'none' || style.visibility === 'hidden') continue;
-      const own = element.getBoundingClientRect();
-      const rect = geometry.visualRect(
-        { left: own.left, right: own.right, top: own.top, bottom: own.bottom },
-        (own.width === 0 || own.height === 0) ? visibleChildRects(element) : null);
-      if (!rect) continue;
-      records.push({
-        element,
-        previousVisibility: element.style.visibility,
-        isSticky: style.position === 'sticky',
-        cssTop: parseFloat(style.top) || 0,
-        height: own.height,
-        visualRect: rect,
-      });
-    }
-    return records;
-  }
-
-  // Visible descendant rects of a zero-area element (capped at 50 to bound deep DOMs)
-  function visibleChildRects(el) {
-    const rects = [];
-    for (const descendant of el.querySelectorAll('*')) {
-      const style = getComputedStyle(descendant);
-      if (style.display === 'none' || style.visibility === 'hidden') continue;
-      const rect = descendant.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) continue;
-      rects.push({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom });
-      if (rects.length >= 50) break;
-    }
-    return rects;
-  }
 
   async function requestFrame() {
     const wait = FRAME_MIN_INTERVAL - (Date.now() - lastCaptureAt);
@@ -107,19 +64,13 @@ import { ScrollTarget } from './scroll-target.js';
     // Disable smooth scrolling so scrollTo animations cannot disturb alignment; restored afterwards
     const restoreScrollBehavior = target.saveScrollBehavior();
 
-    const fixed = collectFixedElements();
-    const known = new Set(fixed.map((record) => record.element));
-    // Record whether each element intersects the selection at selection time
-    // (viewport coordinates; the page has not scrolled yet). Fixed/stuck elements
-    // keep the same visual position at any scroll offset, so this check holds for
-    // the whole capture. Uses the visual rect from collection: for zero-area
-    // wrappers (h:0 sticky + absolute descendants) the visible region lives on the
-    // descendants, and the element's own rect would misjudge "selection covers the
-    // toolbar" as uncovered.
-    const selectionBounds = { left: sel.x, right: sel.x + sel.width, top: sel.y, bottom: sel.y + sel.height };
-    for (const record of fixed) {
-      record.coveredBySelection = geometry.rectsOverlap(record.visualRect, selectionBounds);
-    }
+    // Selection coverage is judged at selection time (viewport coordinates; the
+    // page has not scrolled yet) — fixed/stuck elements keep the same visual
+    // position at any scroll offset, so the check holds for the whole capture.
+    const fixed = new FixedElementManager(target, {
+      left: sel.x, right: sel.x + sel.width, top: sel.y, bottom: sel.y + sel.height,
+    });
+    fixed.collect();
 
     let dpr = null;
     let parts = null;
@@ -158,26 +109,7 @@ import { ScrollTarget } from './scroll-target.js';
       const capContent = contentHeight - startY;
       const frames = geometry.planFrames(capContent, viewportHeight);
 
-      // Natural document position of sticky elements (content coordinates): measure
-      // by temporarily switching to relative + top:auto (sticky and relative occupy
-      // the same in-flow slot), then restore.
-      // Fixed elements and elements outside the container have no natural position
-      // in the content-coordinate sense, so naturalTop stays null (hidden throughout);
-      // content-level stickies (taller than half the viewport, e.g. scroll-jacking
-      // containers) are never hidden and need no measurement.
-      for (const record of fixed) {
-        record.naturalTop = null;
-        if (!record.isSticky || !target.contains(record.element)) continue;
-        if (geometry.stickyIsContent(record.height, viewportHeight)) continue;
-        const previousPosition = record.element.style.position;
-        const previousTop = record.element.style.top;
-        record.element.style.position = 'relative';
-        record.element.style.top = 'auto';
-        const rect = record.element.getBoundingClientRect();
-        record.naturalTop = rect.top - target.contentBoxTop() + target.top;
-        record.element.style.position = previousPosition;
-        record.element.style.top = previousTop;
-      }
+      fixed.measureNaturalTops();
 
       for (let i = 0; i < frames.length; i++) {
         if (aborted) throw new Error('aborted');
@@ -185,24 +117,12 @@ import { ScrollTarget } from './scroll-target.js';
 
         target.setTop(frames[i] + startY);
         await target.settle();
-        // Popup sweep: fixed/sticky elements that appear mid-capture (e.g. a delayed
-        // cookie banner) were not part of the scene at selection time — fold them
-        // into the managed list with coveredBySelection=false and naturalTop=null so the
-        // rules below hide them. (A full rescan per frame has a cost, but the frame
-        // budget is ≥520ms, which easily covers it.)
-        for (const record of collectFixedElements()) {
-          if (!known.has(record.element)) {
-            known.add(record.element);
-            fixed.push({ ...record, coveredBySelection: false, naturalTop: null });
-          }
-        }
-        // WYSIWYG visibility per element (pure decision in geometry.frameVisibility):
-        // unstuck stickies at their natural place; covered fixed/stuck elements once
-        // in frame 0; content-level stickies never hidden; everything else hidden.
-        for (const record of fixed) {
-          const visible = geometry.frameVisibility(record, frames[i] + startY, i === 0, viewportHeight);
-          record.element.style.visibility = visible ? record.previousVisibility : 'hidden';
-        }
+        // Popup sweep: fixed/sticky elements that appear mid-capture join the
+        // managed set as not-covered (hidden throughout). A full rescan per frame
+        // has a cost, but the ≥520ms frame budget easily covers it.
+        fixed.sweep();
+        // WYSIWYG visibility per element (pure decision in geometry.frameVisibility)
+        fixed.applyFrame(frames[i] + startY, i === 0);
         await sleep(LAZY_WAIT);
         const dataUrl = await requestFrame();
         const img = await toBitmap(dataUrl);
@@ -244,10 +164,10 @@ import { ScrollTarget } from './scroll-target.js';
     } finally {
       target.setTop(initTop);
       window.scrollTo(initWinX, initWinY);
-      for (const record of fixed) record.element.style.visibility = record.previousVisibility;
+      fixed.restore();
       restoreScrollBehavior();
       chrome.runtime.sendMessage({ type: MSG.DONE });
     }
   }
 
-export { capture, cancel, collectFixedElements };
+export { capture, cancel };
