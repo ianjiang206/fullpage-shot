@@ -33,6 +33,7 @@ A Chrome extension (MV3, zero dependencies) that captures a full webpage by scro
 
 ## Development
 
-- `node --test test/`: unit tests for the stitch.js pure functions
+- `node --test test/`: unit tests for the geometry.js pure functions
+- `node test/probe/capture-e2e.mjs`: headless end-to-end capture check on the fixture page (needs Chrome; `CHROME_BIN` to override the binary)
 - `python3 -m http.server 8000` then open `http://localhost:8000/test/fixtures/long-page.html` for manual testing (`#tall` = oversized mode)
 - `node scripts/make-icons.js`: regenerate the icons
