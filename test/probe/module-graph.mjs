@@ -17,7 +17,7 @@ try {
         onMessage: { addListener: () => {} },
       },
     };
-    const stitch = await import('/content/stitch.js');
+    const geometry = await import('/content/geometry.js');
     const capture = await import('/content/capture.js');
     const select = await import('/content/select.js');
     const preview = await import('/content/preview.js');
@@ -25,7 +25,7 @@ try {
     const fixed = capture.collectFixedElements();
     const shell = fixed.find((f) => f.el.className === 'sticky-shell');
     return {
-      frames: stitch.planFrames(3200, 1000),
+      frames: geometry.planFrames(3200, 1000),
       fixedCount: fixed.length,
       shellHasArea: !!shell && shell.rect.bottom > shell.rect.top,
       exports: [typeof select.start, typeof capture.capture, typeof preview.show, typeof preview.showError],

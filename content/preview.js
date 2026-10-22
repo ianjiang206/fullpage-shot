@@ -1,7 +1,7 @@
 'use strict';
 // Result preview overlay: thumbnail + PNG download (multi-part downloads in sequence)
 // + copy to clipboard (oversized images auto-scaled) + retry/close.
-import { fitScale } from './stitch.js';
+import { fitScale } from './geometry.js';
 
   function mkBtn(text, cls) {
     const b = document.createElement('button');
@@ -27,7 +27,7 @@ import { fitScale } from './stitch.js';
     return { host, card, panel };
   }
 
-  // Stitch parts into a single blob; scale down past MAX_PART_SIZE (clipboard takes one image only)
+  // Stitch parts into a single blob; scale down past MAX_CANVAS_EDGE (clipboard takes one image only)
   function buildSingleBlob(parts, width, totalHeight, dpr) {
     const scale = fitScale(width, totalHeight);
     const c = document.createElement('canvas');
@@ -35,7 +35,7 @@ import { fitScale } from './stitch.js';
     c.height = Math.max(1, Math.round(totalHeight * scale));
     const ctx = c.getContext('2d');
     for (const p of parts) {
-      const dy = Math.round(p.srcY * dpr * scale);
+      const dy = Math.round(p.startY * dpr * scale);
       const dh = Math.round(p.canvas.height * scale);
       ctx.drawImage(p.canvas, 0, 0, p.canvas.width, p.canvas.height, 0, dy, c.width, dh);
     }

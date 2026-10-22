@@ -3,7 +3,7 @@
 // scroll/settle/screenshot/draw → scene restoration.
 // Frame drawing is clipped to the selection's crop column; fixed/sticky elements
 // follow the WYSIWYG visibility rules (spec §5.3).
-import * as stitch from './stitch.js';
+import * as geometry from './geometry.js';
 import { MSG } from '../shared/protocol.js';
 
   const FRAME_MIN_INTERVAL = 520; // captureVisibleTab is rate-limited to 2/sec; leave headroom
@@ -22,10 +22,10 @@ import { MSG } from '../shared/protocol.js';
     const chain = [];
     let el = document.elementFromPoint(x, y);
     while (el && el !== document.documentElement && el !== document.body) {
-      chain.push({ el, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight });
+      chain.push({ element: el, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight });
       el = el.parentElement;
     }
-    return stitch.pickScrollTarget(chain);
+    return geometry.firstScrollable(chain);
   }
 
   // Collect visible fixed/sticky elements plus their original inline visibility
@@ -42,7 +42,7 @@ import { MSG } from '../shared/protocol.js';
       if (cs.position !== 'fixed' && cs.position !== 'sticky') continue;
       if (cs.display === 'none' || cs.visibility === 'hidden') continue;
       const r = el.getBoundingClientRect();
-      const rect = stitch.visualRect(
+      const rect = geometry.visualRect(
         { left: r.left, right: r.right, top: r.top, bottom: r.bottom },
         (r.width === 0 || r.height === 0) ? visibleChildRects(el) : null);
       if (!rect) continue;
@@ -151,7 +151,7 @@ import { MSG } from '../shared/protocol.js';
     // toolbar" as uncovered.
     const selBounds = { left: sel.x, right: sel.x + sel.w, top: sel.y, bottom: sel.y + sel.h };
     for (const f of fixed) {
-      f.inSelection = stitch.rectsOverlap(f.rect, selBounds);
+      f.inSelection = geometry.rectsOverlap(f.rect, selBounds);
     }
 
     let dpr = null;
@@ -178,10 +178,10 @@ import { MSG } from '../shared/protocol.js';
       let containerTop = 0;
       if (!isWindow) {
         const contentTop = () => target.getBoundingClientRect().top + target.clientTop;
-        let visibility = stitch.containerVisibility(contentTop(), target.clientHeight, window.innerHeight);
+        let visibility = geometry.containerVisibility(contentTop(), target.clientHeight, window.innerHeight);
         if (visibility === 'align') {
           window.scrollBy(0, contentTop());
-          visibility = stitch.containerVisibility(contentTop(), target.clientHeight, window.innerHeight);
+          visibility = geometry.containerVisibility(contentTop(), target.clientHeight, window.innerHeight);
         }
         if (visibility !== 'ok') {
           throw new Error('内部滚动容器高于视口，暂不支持完整截取；请改用「截取整页」');
@@ -197,12 +197,12 @@ import { MSG } from '../shared/protocol.js';
       // coordinates" (0 = startY); scrolling translates back to content coordinates
       // via setTop(frame + startY).
       const frameOriginY = isWindow ? -getTop() : containerTop - target.scrollTop;
-      const startY = sel.fromTop ? 0 : stitch.selectionStartY(sel.y, frameOriginY);
+      const startY = sel.fromTop ? 0 : geometry.selectionStartY(sel.y, frameOriginY);
       if (startY >= contentHeight) {
         throw new Error('选区起点已在内容末尾之后，请重新框选');
       }
       const capContent = contentHeight - startY;
-      const frames = stitch.planFrames(capContent, viewportHeight);
+      const frames = geometry.planFrames(capContent, viewportHeight);
 
       // Natural document position of sticky elements (content coordinates): measure
       // by temporarily switching to relative + top:auto (sticky and relative occupy
@@ -214,7 +214,7 @@ import { MSG } from '../shared/protocol.js';
       for (const f of fixed) {
         f.naturalTop = null;
         if (!f.sticky || (!isWindow && !target.contains(f.el))) continue;
-        if (stitch.stickyIsContent(f.height, viewportHeight)) continue;
+        if (geometry.stickyIsContent(f.height, viewportHeight)) continue;
         const prevPos = f.el.style.position;
         const prevTop = f.el.style.top;
         f.el.style.position = 'relative';
@@ -251,9 +251,9 @@ import { MSG } from '../shared/protocol.js';
         // 3) content-level stickies (taller than half the viewport) are never hidden;
         // 4) everything else is hidden — no duplicates, no occlusion
         for (const f of fixed) {
-          if (f.sticky && stitch.stickyIsContent(f.height, viewportHeight)) continue;
+          if (f.sticky && geometry.stickyIsContent(f.height, viewportHeight)) continue;
           const atNaturalPlace = f.sticky && f.naturalTop !== null &&
-            stitch.stickyVisible(frames[i] + startY, f.naturalTop, f.cssTop);
+            geometry.stickyAtNaturalPosition(frames[i] + startY, f.naturalTop, f.cssTop);
           const visible = atNaturalPlace || (i === 0 && f.inSelection);
           f.el.style.visibility = visible ? f.prev : 'hidden';
         }
@@ -265,12 +265,12 @@ import { MSG } from '../shared/protocol.js';
           // Measure dpr from the first frame (img.width = innerWidth × real dpr,
           // including page zoom)
           dpr = img.width / window.innerWidth;
-          parts = stitch.assignParts(frames, viewportHeight, capContent, dpr);
-          colRect = stitch.cropRect(sel.x, sel.w, window.innerWidth, dpr);
-          if (colRect.sw <= 0) throw new Error('裁剪列宽度为 0，请重新框选');
+          parts = geometry.splitIntoParts(frames, viewportHeight, capContent, dpr);
+          colRect = geometry.cropColumn(sel.x, sel.w, window.innerWidth, dpr);
+          if (colRect.width <= 0) throw new Error('裁剪列宽度为 0，请重新框选');
           canvases = parts.map((p) => {
             const c = document.createElement('canvas');
-            c.width = colRect.sw;
+            c.width = colRect.width;
             c.height = Math.round(p.height * dpr);
             return c;
           });
@@ -279,19 +279,19 @@ import { MSG } from '../shared/protocol.js';
         for (let p = 0; p < parts.length; p++) {
           const part = parts[p];
           if (i < part.frameStart || i >= part.frameEnd) continue;
-          const slice = stitch.frameSlice(frames[i], viewportHeight, capContent, part.srcY, part.height);
+          const slice = geometry.framePartIntersection(frames[i], viewportHeight, capContent, part.y, part.height);
           if (!slice) continue;
           canvases[p].getContext('2d').drawImage(
             img,
-            colRect.sx, Math.round((containerTop + slice.sy) * dpr), colRect.sw, Math.round(slice.sh * dpr),
-            0, Math.round(slice.dy * dpr), colRect.sw, Math.round(slice.sh * dpr),
+            colRect.x, Math.round((containerTop + slice.frameOffsetY) * dpr), colRect.width, Math.round(slice.height * dpr),
+            0, Math.round(slice.partOffsetY * dpr), colRect.width, Math.round(slice.height * dpr),
           );
         }
       }
 
       return {
-        parts: parts.map((p, idx) => ({ canvas: canvases[idx], srcY: p.srcY, heightCss: p.height })),
-        width: colRect.sw,
+        parts: parts.map((p, idx) => ({ canvas: canvases[idx], startY: p.y, cssHeight: p.height })),
+        width: colRect.width,
         totalHeight: Math.round(capContent * dpr),
         dpr,
       };
