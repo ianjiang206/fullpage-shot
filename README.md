@@ -6,8 +6,14 @@ The UI speaks English and Chinese, following the browser's language.
 
 ## Install
 
-1. `chrome://extensions` → enable "Developer mode"
-2. "Load unpacked" → select this directory
+1. Get the code:
+   - Clone: `git clone https://github.com/<your-account>/fullpage-shot.git`
+   - Or download: on the GitHub repo page, **Code → Download ZIP**, then extract the archive
+2. Open `chrome://extensions` and enable **Developer mode** (top-right toggle)
+3. Click **Load unpacked** and select the cloned/extracted `fullpage-shot` directory
+4. The FullPage Shot icon appears in the toolbar — pin it via the puzzle icon for quick access
+
+To update later: `git pull` (or download the ZIP again), then click the reload button on the extension card at `chrome://extensions`.
 
 ## Usage
 
