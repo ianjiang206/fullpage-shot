@@ -4,6 +4,9 @@ A Chrome extension (MV3, zero dependencies) that captures a full webpage by scro
 
 The UI speaks English and Chinese, following the browser's language.
 
+https://github.com/user-attachments/assets/dfca6d61-c372-4a36-bb0c-00da8eaf4427
+
+
 ## Install
 
 1. Get the code:
