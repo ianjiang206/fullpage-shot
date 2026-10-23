@@ -22,6 +22,6 @@
     "128": "icons/icon128.png"
   },
   "web_accessible_resources": [
-    { "resources": ["overlay.css", "content/*.js", "shared/*.js"], "matches": ["<all_urls>"] }
+    { "resources": ["content/overlay.css", "content/*.js", "shared/*.js"], "matches": ["<all_urls>"] }
   ]
 }

@@ -24,7 +24,7 @@ MV3 extension, plain JS. Permissions are only `activeTab` + `scripting` (no host
 - **captureVisibleTab is rate-limited to 2/sec**: frame spacing ≥520ms with backoff retries, compatible with the 300ms per-frame lazy-load wait.
 - **fixed/sticky handling is the subtlest part of this project** (full rules in spec §5.3 — read it before changing anything): WYSIWYG — elements covered by the selection (`coveredBySelection`, judged with the visual rect at collection time) appear once in frame 0; an unstuck sticky appears once at its natural position (`stickyAtNaturalPosition` + measuring `naturalTop` via the relative trick); stickies taller than half the viewport are scroll-jacking content and are never hidden (`stickyIsContent`); zero-area elements use the bounding box of visible descendants (`visualRect`, the GitHub blob toolbar pattern). Capture starts with a full warm-up scroll pass to trigger lazy loading, and every frame does a popup sweep (newly appeared fixed elements are hidden for the whole capture). The per-frame decision is pure `geometry.frameVisibility`; the DOM lifecycle is `content/fixed-elements.js`'s `FixedElementManager`.
 - Stitched height × dpr beyond 16384px splits into multiple PNGs along frame boundaries; dpr is measured from the first frame (`img.width / innerWidth`), never trusted from `window.devicePixelRatio`.
-- Selection/preview UI extends the `Overlay` base class in `content/overlay.js` (shadow DOM; styles from `overlay.css` injected via `web_accessible_resources`, `:host { all: initial }` isolation).
+- Selection/preview UI extends the `Overlay` base class in `content/overlay.js` (shadow DOM; styles from `content/overlay.css` injected via `web_accessible_resources`, `:host { all: initial }` isolation).
 
 ## Conventions
 

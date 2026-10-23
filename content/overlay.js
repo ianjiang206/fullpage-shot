@@ -25,7 +25,7 @@ export class Overlay {
     this.#onClose = onClose;
     this.host = h('div');
     this.shadow = this.host.attachShadow({ mode: 'open' });
-    this.shadow.append(h('link', { rel: 'stylesheet', href: chrome.runtime.getURL('overlay.css') }));
+    this.shadow.append(h('link', { rel: 'stylesheet', href: chrome.runtime.getURL('content/overlay.css') }));
     this.#keyListener = (event) => this.handleKeyDown(event);
   }
 
