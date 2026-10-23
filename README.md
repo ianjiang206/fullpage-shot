@@ -7,7 +7,7 @@ The UI speaks English and Chinese, following the browser's language.
 ## Install
 
 1. Get the code:
-   - Clone: `git clone https://github.com/otorain/fullpage-shot.git`
+   - Clone: `git clone https://github.com/ianlynxk/fullpage-shot.git`
    - Or download: on the GitHub repo page, **Code → Download ZIP**, then extract the archive
 2. Open `chrome://extensions` and enable **Developer mode** (top-right toggle)
 3. Click **Load unpacked** and select the cloned/extracted `fullpage-shot` directory
