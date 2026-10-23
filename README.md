@@ -1,8 +1,10 @@
 <p align="center">
-  <img src="icons/icon128.png" alt="FullPage Shot" width="128" height="128">
+  <img src="icons/logo.svg" alt="FullPage Shot" width="128" height="128">
 </p>
 
 <h1 align="center">FullPage Shot</h1>
+
+<br>
 
 A Chrome extension (MV3, zero dependencies) that captures a full webpage by scrolling and stitching, with region selection to exclude sidebars and other irrelevant content.
 
