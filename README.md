@@ -2,6 +2,8 @@
 
 A Chrome extension (MV3, zero dependencies) that captures a full webpage by scrolling and stitching, with region selection to exclude sidebars and other irrelevant content.
 
+The UI speaks English and Chinese, following the browser's language.
+
 ## Install
 
 1. `chrome://extensions` → enable "Developer mode"
@@ -10,17 +12,17 @@ A Chrome extension (MV3, zero dependencies) that captures a full webpage by scro
 ## Usage
 
 1. Click the toolbar icon on the target page
-2. Drag a rectangle around the content column to keep (leave sidebars outside the box), or click 「截取整页」
+2. Drag a rectangle around the content column to keep (leave sidebars outside the box), or click **Capture full page**
 3. Enter / the action button → the page scrolls and stitches automatically (Esc cancels)
-4. In the preview overlay: 「下载 PNG」 or 「复制到剪贴板」
+4. In the preview overlay: **Download PNG** or **Copy to clipboard**
 
 ## Behavior notes
 
-- The selection's horizontal range becomes the fixed crop column; vertically the capture runs from the selection's top edge to the content end (「截取整页」 starts from the top)
-- Inner scroll containers are auto-detected (nearest scrollable ancestor of the selection center with `scrollHeight > clientHeight`); before capturing, the page scrolls so the container is fully visible — containers taller than the viewport are rejected with a message suggesting 「截取整页」
+- The selection's horizontal range becomes the fixed crop column; vertically the capture runs from the selection's top edge to the content end (Capture full page starts from the top)
+- Inner scroll containers are auto-detected (nearest scrollable ancestor of the selection center with `scrollHeight > clientHeight`); before capturing, the page scrolls so the container is fully visible — containers taller than the viewport are rejected with a message suggesting Capture full page
 - fixed / stuck sticky elements (e.g. navbars): if the selection covered them, they appear once at the top of the result as seen; otherwise they never appear and never occlude content. An unstuck sticky appears once at its natural position as normal content
 - Stickies taller than half the viewport are treated as scroll-jacking content and are never hidden — they appear multiple times down the long image as scroll progresses, which is the inherent expression of scroll animation in a linear image
-- Before capturing, the page is scrolled through once as a warm-up (badge shows "预热") to trigger lazy images/iframes and scroll reveal animations; fixed elements that pop up mid-capture (e.g. delayed cookie banners) are hidden automatically
+- Before capturing, the page is scrolled through once as a warm-up (badge shows "Warming up") to trigger lazy images/iframes and scroll reveal animations; fixed elements that pop up mid-capture (e.g. delayed cookie banners) are hidden automatically
 - Stitched height beyond 16384px (× dpr) is split into multiple PNGs; clipboard copy produces a single image scaled down to fit
 - Progress is shown on the extension icon badge (i/n)
 
