@@ -16,7 +16,7 @@ https://github.com/user-attachments/assets/dfca6d61-c372-4a36-bb0c-00da8eaf4427
 ## Install
 
 1. Get the code:
-   - Clone: `git clone https://github.com/ianlynxk/fullpage-shot.git`
+   - Clone: `git clone https://github.com/ianjiang206/fullpage-shot.git`
    - Or download: on the GitHub repo page, **Code → Download ZIP**, then extract the archive
 2. Open `chrome://extensions` and enable **Developer mode** (top-right toggle)
 3. Click **Load unpacked** and select the cloned/extracted `fullpage-shot` directory
